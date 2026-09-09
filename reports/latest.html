@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الرصد والذكاء الإخباري | AI & Sports Watchdog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --bg-surface: #111827;
+            --bg-card: rgba(17, 24, 39, 0.78);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --tech-glow: #06b6d4;
+            --sports-glow: #ec4899;
+            --radius-xl: 18px;
+            --radius-md: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            direction: rtl;
+            text-align: right;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(236, 72, 153, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(16px);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .brand-title h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-title p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .metric-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .toolbar {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 280px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            padding: 0.9rem 1.25rem;
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--tech-glow);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(580px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .tracks-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .track-column {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius-xl);
+            padding: 1.75rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .track-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 1.5rem;
+        }
+
+        .track-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .track-tech h2 { color: #38bdf8; }
+        .track-sports h2 { color: #f472b6; }
+
+        .track-summary {
+            background: rgba(255, 255, 255, 0.03);
+            border-right: 4px solid var(--tech-glow);
+            padding: 0.9rem 1.1rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #d1d5db;
+            margin-bottom: 1.5rem;
+        }
+
+        .track-sports .track-summary {
+            border-right-color: var(--sports-glow);
+        }
+
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .news-card {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 1.35rem;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .badges-row {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            border-radius: 9999px;
+            color: #fff;
+        }
+
+        .badge-score {
+            font-family: 'JetBrains Mono', monospace;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .badge-tag {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .source-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.25rem 0.55rem;
+            border-radius: 4px;
+        }
+
+        .news-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-title a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .news-title a:hover {
+            color: #38bdf8;
+        }
+
+        .original-title-ref {
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+            direction: ltr;
+            text-align: left;
+            font-family: sans-serif;
+        }
+
+        .original-title-ref span {
+            color: #4b5563;
+            font-weight: bold;
+        }
+
+        .takeaway-box {
+            display: flex;
+            gap: 0.6rem;
+            background: rgba(0, 0, 0, 0.28);
+            padding: 0.75rem 0.95rem;
+            border-radius: 8px;
+            margin-bottom: 0.95rem;
+            align-items: flex-start;
+        }
+
+        .takeaway-icon {
+            font-size: 1rem;
+            color: #f59e0b;
+        }
+
+        .takeaway-text {
+            font-size: 0.9rem;
+            color: #e5e7eb;
+            line-height: 1.5;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .read-btn {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 700;
+            padding: 0.3rem 0.75rem;
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.12);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .read-btn:hover {
+            background: rgba(56, 189, 248, 0.3);
+            color: #fff;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding-bottom: 2rem;
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand-title">
+                <h1>🛡️ وكيل الرصد والذكاء الإخباري الشامل</h1>
+                <p>وكيل مستقل للرصد الذكي للأخبار والتحليلات الفورية | مدمج مع تيليجرام ومهام Antigravity</p>
+            </div>
+            <div class="metrics-bar">
+                <div class="metric-pill">
+                    <div class="metric-val">549</div>
+                    <div class="metric-label">إجمالي الأخبار المفحوصة</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">17</div>
+                    <div class="metric-label">الأخبار الجديدة</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">10</div>
+                    <div class="metric-label">أهم الاختيارات</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">100%</div>
+                    <div class="metric-label">حالة النظام</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="toolbar">
+            <input type="text" id="liveSearch" class="search-input" placeholder="🔍 ابحث في العناوين والكلمات المفتاحية (مثال: برشلونة، فليك، يامال، جيميني، آبل، كلود)..." onkeyup="filterNews()">
+        </div>
+
+        <!-- Two Track Layout -->
+        <div class="tracks-grid">
+            <!-- Track 1: Tech & AI -->
+            <section class="track-column track-tech">
+                <div class="track-header">
+                    <h2>🤖 قطاع التقنية والذكاء الاصطناعي</h2>
+                    <span class="badge" style="background: var(--tech-glow);">أهم 5 أحداث</span>
+                </div>
+                <div class="track-summary">
+                    تم رصد 5 من أهم التطورات المتسارعة في قطاع الذكاء الاصطناعي والشركات الكبرى. الخبر الأبرز: &#x27;باحثون أنثروبيون يحذرون من أن الذكاء الاصطناعي يمكن أن يدمر البشرية في المستقبل&#x27; (التقييم: 54.0/100).
+                </div>
+                <div class="cards-list">
+                    
+                <article class="news-card" data-category="tech_ai" data-search="باحثون أنثروبيون يحذرون من أن الذكاء الاصطناعي يمكن أن يدمر البشرية في المستقبل anthropic researchers warn artificial intelligence could destroy humanity in the future - wlos.com التعامل بالذكاء الاصطناعي  أنثروبي">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">54.0 / 100</span>
+                            <span class="badge badge-tag">التعامل بالذكاء الاصطناعي </span><span class="badge badge-tag">أنثروبي</span>
+                        </div>
+                        <span class="source-tag">Google News - AI &amp; LLMs (Gemini, ChatGPT, Claude)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMi2gFBVV95cUxNekN2S0xwVndUODlDaVhoWlZPdVhWeW1TTFJkclp3ckdMQk5obkgwVjlJVGZFaEY2MXo2Yk51M1RISFdqanZEVXNaV2hFSFM4azBNV2NrOXAzR3VvNUt2ek1UdV9OWE9wdENZTzJ5dERidkFVMXdHMzB6UFp5MDlVZ21YX01UeElWZ0xXMHY0ejJyVWJzd1FZblo5V2V0SG56ODRzSDZuaVpxMmF6WDNZbnBqQ2F5a1BxblhveHpzWVJGOTRlWE9uek1Kci12UVYwUnVLR0FROUM1QQ?oc=5" target="_blank" rel="noopener noreferrer">باحثون أنثروبيون يحذرون من أن الذكاء الاصطناعي يمكن أن يدمر البشرية في المستقبل</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Anthropic researchers warn artificial intelligence could destroy humanity in the future - wlos.com
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">باحثون أنثروبيون يحذرون من أن الذكاء الاصطناعي يمكن أن يدمر البشرية في المستقبل wlos.com</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T15:53</span>
+                        <a href="https://news.google.com/rss/articles/CBMi2gFBVV95cUxNekN2S0xwVndUODlDaVhoWlZPdVhWeW1TTFJkclp3ckdMQk5obkgwVjlJVGZFaEY2MXo2Yk51M1RISFdqanZEVXNaV2hFSFM4azBNV2NrOXAzR3VvNUt2ek1UdV9OWE9wdENZTzJ5dERidkFVMXdHMzB6UFp5MDlVZ21YX01UeElWZ0xXMHY0ejJyVWJzd1FZblo5V2V0SG56ODRzSDZuaVpxMmF6WDNZbnBqQ2F5a1BxblhveHpzWVJGOTRlWE9uek1Kci12UVYwUnVLR0FROUM1QQ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="البحث عن تعليق عام! استخدام الذكاء الاصطناعي لتحليل إطار الأمن السيبراني 2.0 وإعداد التقارير - المعهد الوطني للمعايير والتكنولوجيا (.gov) seeking public comment! using artificial intelligence for cybersecurity framework 2.0 analysis and reporting - national institute of standards and technology (.gov) التعامل بالذكاء الاصطناعي  إطار">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">46.0 / 100</span>
+                            <span class="badge badge-tag">التعامل بالذكاء الاصطناعي </span><span class="badge badge-tag">إطار</span>
+                        </div>
+                        <span class="source-tag">Google News - AI &amp; LLMs (Gemini, ChatGPT, Claude)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMisgFBVV95cUxQQzJST18wbU1TQ0FENG1nTGJ0aERmZ0dVcnBHdm1fUmdBQ012TnpLLW1XX2FXZDNhMlU5N3ZkSF8wZC1NdTQ4YjFqS21hX1hfQXhmbGQ0MXhEbjJZRUZNNDNlSUpaYTMyblBKZndxQVpIWFJodlJ3MGFQWU5KbkQ4VEVOWFowc1pyN2wzeEJsM2RUU2F2MXNkUm9pVnUzcnlrS1R6bnlVTXpmSHItUEFLWEpn?oc=5" target="_blank" rel="noopener noreferrer">البحث عن تعليق عام! استخدام الذكاء الاصطناعي لتحليل إطار الأمن السيبراني 2.0 وإعداد التقارير - المعهد الوطني للمعايير والتكنولوجيا (.gov)</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Seeking Public Comment! Using Artificial Intelligence for Cybersecurity Framework 2.0 Analysis and Reporting - National Institute of Standards and Technology (.gov)
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">البحث عن تعليق عام! استخدام الذكاء الاصطناعي لإطار الأمن السيبراني 2.0 التحليل والإبلاغ المعهد الوطني للمعايير والتكنولوجيا (...</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-08-19T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMisgFBVV95cUxQQzJST18wbU1TQ0FENG1nTGJ0aERmZ0dVcnBHdm1fUmdBQ012TnpLLW1XX2FXZDNhMlU5N3ZkSF8wZC1NdTQ4YjFqS21hX1hfQXhmbGQ0MXhEbjJZRUZNNDNlSUpaYTMyblBKZndxQVpIWFJodlJ3MGFQWU5KbkQ4VEVOWFowc1pyN2wzeEJsM2RUU2F2MXNkUm9pVnUzcnlrS1R6bnlVTXpmSHItUEFLWEpn?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="apple تكشف النقاب عن أول هاتف ذكي قابل للطي iphone duo apple unveils first foldable smartphone iphone duo - rte.ie يكشف النقاب عن آبل">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">42.5 / 100</span>
+                            <span class="badge badge-tag">يكشف النقاب عن</span><span class="badge badge-tag">آبل</span>
+                        </div>
+                        <span class="source-tag">Google News - Tech Giants (Google, Apple, Samsung)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTFBFQW1zdjhONXFlczZhajBYZGtoaEJKd3hzS0xibHliRExIdkdBQjRtWjd1anFaNnF0VVBjUHVnRjR1M0l3bThhRThHb1dPMW81Um5oWVFKYlJJdU5zOVdOd0N3RW5GZzYxTDMtUmZuWXViZDJD?oc=5" target="_blank" rel="noopener noreferrer">Apple تكشف النقاب عن أول هاتف ذكي قابل للطي iPhone Duo</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Apple unveils first foldable smartphone iPhone Duo - RTE.ie
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Apple تكشف النقاب عن أول هاتف ذكي قابل للطي iPhone Duo RTE.ie</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T16:46</span>
+                        <a href="https://news.google.com/rss/articles/CBMidEFVX3lxTFBFQW1zdjhONXFlczZhajBYZGtoaEJKd3hzS0xibHliRExIdkdBQjRtWjd1anFaNnF0VVBjUHVnRjR1M0l3bThhRThHb1dPMW81Um5oWVFKYlJJdU5zOVdOd0N3RW5GZzYxTDMtUmZuWXViZDJD?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="رئيس جامعة وايومنغ: يجب أن تهيمن المدرسة على الذكاء الاصطناعي university of wyoming president: school should dominate in artificial intelligence - cowboy state daily التعامل بالذكاء الاصطناعي ">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">36.0 / 100</span>
+                            <span class="badge badge-tag">التعامل بالذكاء الاصطناعي </span>
+                        </div>
+                        <span class="source-tag">Google News - AI &amp; LLMs (Gemini, ChatGPT, Claude)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMitgFBVV95cUxOV0M5bEtQYW1HejJNVG9xUHdwMWFIVUEtQ0dzWEMzMDFtdzBwUjBDT09sMVJaVTRBa1dEakM2OUJtWVFZcW5QdmFEeWxLU1Q0WDMzQVNNQzZWMC1rSWRlOUkzQ0hJSTlTOE1uR3JwcDR3UTAyckwxM1ItcUFzVk00Y0JlNV96SFBVR00tcDhHdWZNbTZEdnFHdVpXNFRGWHhVX1lfaGNFOUx5cXViUVd3azFrTVdndw?oc=5" target="_blank" rel="noopener noreferrer">رئيس جامعة وايومنغ: يجب أن تهيمن المدرسة على الذكاء الاصطناعي</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> University Of Wyoming President: School Should Dominate In Artificial Intelligence - Cowboy State Daily
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">رئيس جامعة وايومنغ: المدرسة يجب أن تهيمن على الذكاء الاصطناعي Cowboy State Daily</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T15:34</span>
+                        <a href="https://news.google.com/rss/articles/CBMitgFBVV95cUxOV0M5bEtQYW1HejJNVG9xUHdwMWFIVUEtQ0dzWEMzMDFtdzBwUjBDT09sMVJaVTRBa1dEakM2OUJtWVFZcW5QdmFEeWxLU1Q0WDMzQVNNQzZWMC1rSWRlOUkzQ0hJSTlTOE1uR3JwcDR3UTAyckwxM1ItcUFzVk00Y0JlNV96SFBVR00tcDhHdWZNbTZEdnFHdVpXNFRGWHhVX1lfaGNFOUx5cXViUVd3azFrTVdndw?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="التنبؤ: ستكون أسهم الذكاء الاصطناعي الثلاثة هذه من أفضل الأسهم أداءً حتى نهاية عام 2026 prediction: these 3 artificial intelligence (ai) stocks will be the top performers to end 2026 - theglobeandmail.com التعامل بالذكاء الاصطناعي ">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">36.0 / 100</span>
+                            <span class="badge badge-tag">التعامل بالذكاء الاصطناعي </span>
+                        </div>
+                        <span class="source-tag">Google News - AI &amp; LLMs (Gemini, ChatGPT, Claude)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMihwJBVV95cUxOZGZuWDFadllBb2I2WF9HT0MycWdveVpMMWJQbE52R0dIelVoZWlEU1ZoeE53YzJ2WVotYW1EZWRlakpMTkEtVVBrUTFZMlZadE5MbHBnOGdNR1FaLXpPX1R6em1TNTdKalNKbDJwVXhMa1lxbXJIWEhEU0xQQWt3VzlwSEc5eTR3OW52SWZNQUZSTzJoOW9BWmdoNl9YYjYzclZkMVN1LUZkQXNidDM5OGhlWXdHVnpoeWJmLW1YUWR3cU5xcjc2MDhabElqZ3BWNWF0bl84LXlWYzJGTmNtaDk1U0xuMUo1eVA4ZUlLbFhrWU93SlBPVm00cXBCb0xkd2xxOEs4UQ?oc=5" target="_blank" rel="noopener noreferrer">التنبؤ: ستكون أسهم الذكاء الاصطناعي الثلاثة هذه من أفضل الأسهم أداءً حتى نهاية عام 2026</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Prediction: These 3 Artificial Intelligence (AI) Stocks Will Be the Top Performers to End 2026 - theglobeandmail.com
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">التنبؤ: ستكون أسهم الذكاء الاصطناعي الثلاثة هذه الأفضل أداءً في نهاية عام 2026 theglobeandmail.com</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T12:23</span>
+                        <a href="https://news.google.com/rss/articles/CBMihwJBVV95cUxOZGZuWDFadllBb2I2WF9HT0MycWdveVpMMWJQbE52R0dIelVoZWlEU1ZoeE53YzJ2WVotYW1EZWRlakpMTkEtVVBrUTFZMlZadE5MbHBnOGdNR1FaLXpPX1R6em1TNTdKalNKbDJwVXhMa1lxbXJIWEhEU0xQQWt3VzlwSEc5eTR3OW52SWZNQUZSTzJoOW9BWmdoNl9YYjYzclZkMVN1LUZkQXNidDM5OGhlWXdHVnpoeWJmLW1YUWR3cU5xcjc2MDhabElqZ3BWNWF0bl84LXlWYzJGTmNtaDk1U0xuMUo1eVA4ZUlLbFhrWU93SlBPVm00cXBCb0xkd2xxOEs4UQ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+                </div>
+            </section>
+
+            <!-- Track 2: Sports & FC Barcelona -->
+            <section class="track-column track-sports">
+                <div class="track-header">
+                    <h2>⚽ قطاع الرياضة وكرة القدم الأوروبية</h2>
+                    <span class="badge" style="background: var(--sports-glow);">أهم 5 أحداث</span>
+                </div>
+                <div class="track-summary">
+                    متابعة دقيقة ومكثفة لكرة القدم الأوروبية مع التركيز على نادي برشلونة (0 أحداث رئيسية). الخبر الأبرز: &#x27;[دوري أبطال أوروبا لكرة القدم]مباشر!%~ ليفربول ضد أتلتيكو مدريد مباشر الآن&#x27;- 大分トリニータオフィシャルサイト&#x27; (التقييم: 46.5/100).
+                </div>
+                <div class="cards-list">
+                    
+                <article class="news-card" data-category="sports" data-search="[دوري أبطال أوروبا لكرة القدم]مباشر!%~ ليفربول ضد أتلتيكو مدريد مباشر الآن&#x27;- 大分トリニータオフィシャルサイト [champions league football]live!%~ liverpool vs atletico madrid live now&#x27; - 大分トリニータオフィシャルサイト دوري أبطال أوروبا اتلتيكو مدريد ليفربول ">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">46.5 / 100</span>
+                            <span class="badge badge-tag">دوري أبطال أوروبا</span><span class="badge badge-tag">اتلتيكو مدريد</span><span class="badge badge-tag">ليفربول </span>
+                        </div>
+                        <span class="source-tag">Google News - UEFA Champions League &amp; Top Leagues</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMilgJBVV95cUxObWQ4RF9RSHhNa3FPbHRCRXNIM1RtOXBHVXRkVGE2V3Bwb3FDQzl3RkxlX3c3eGxtWFhyeFQ3Q0xnbVZjVE8yY212ZFRjYmFLQnRuVGhudl9zV3NRc3p6U1Qya293RFA4X0RPSmZHNGdTQmVabU1iQVdlMHF5UmtWQ1NJeWtUTGFCbzItZzRxNk9tMXNnNDVvWFhuaXNFODgwQm9RUkQ0dEFxVVBOUVNJRWVkR1JyQnpFd3VabWtYbW1HckxSYjhTUXNPRkJ2cFdGQ3RWdlRwZkdKYzJJeEhIUnN6N2RBTHJSdG9VaFE1QmlGdW9QNUxOcjJZa0tMWWR4U0tQUFZsbHlDUUhuM015ZlBEelN6QQ?oc=5" target="_blank" rel="noopener noreferrer">[دوري أبطال أوروبا لكرة القدم]مباشر!%~ ليفربول ضد أتلتيكو مدريد مباشر الآن&#x27;- 大分トリニータオフィシャルサイト</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> [CHAMPIONS LEAGUE FOOTBALL]LIVE!%~ Liverpool vs Atletico Madrid LIVE NOW&#x27; - 大分トリニータオフィシャルサイト
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">[دوري أبطال أوروبا لكرة القدم]مباشر!%~ ليفربول ضد أتلتيكو مدريد مباشر الآن&#x27; 大分トリニータオフィシャルサイト</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T17:11</span>
+                        <a href="https://news.google.com/rss/articles/CBMilgJBVV95cUxObWQ4RF9RSHhNa3FPbHRCRXNIM1RtOXBHVXRkVGE2V3Bwb3FDQzl3RkxlX3c3eGxtWFhyeFQ3Q0xnbVZjVE8yY212ZFRjYmFLQnRuVGhudl9zV3NRc3p6U1Qya293RFA4X0RPSmZHNGdTQmVabU1iQVdlMHF5UmtWQ1NJeWtUTGFCbzItZzRxNk9tMXNnNDVvWFhuaXNFODgwQm9RUkQ0dEFxVVBOUVNJRWVkR1JyQnpFd3VabWtYbW1HckxSYjhTUXNPRkJ2cFdGQ3RWdlRwZkdKYzJJeEhIUnN6N2RBTHJSdG9VaFE1QmlGdW9QNUxOcjJZa0tMWWR4U0tQUFZsbHlDUUhuM015ZlBEelN6QQ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="مسؤولو مانشستر سيتي يقيمون تشكيلة إنزو ماريسكا لاحتمال نجاح الدوري الممتاز ودوري أبطال أوروبا man city officials assess enzo maresca&#x27;s squad for potential premier league and uefa champions league success - cityxtra.co.uk دوري أبطال أوروبا الدوري الإنجليزي الاتحاد الأوروبي لكرة القدم">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">46.5 / 100</span>
+                            <span class="badge badge-tag">دوري أبطال أوروبا</span><span class="badge badge-tag">الدوري الإنجليزي</span><span class="badge badge-tag">الاتحاد الأوروبي لكرة القدم</span>
+                        </div>
+                        <span class="source-tag">Google News - UEFA Champions League &amp; Top Leagues</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMi6gFBVV95cUxPZXN3NGVBOWJtaVhBX3dwcmo3bWpEcGlISUQ2NzhKSWVaZ1RkQmpOQnFjVmlYcFluWmdEZkF3VVlLWV9zQWtDaUVma1d2THcyc1dEbWlfUkoxOUFmblRvVDRLQUcxdC1RTWxTa1hlbndESHlBZ0ZIbTdHWHpNd00yUExUdlprQjVQY2ZJTmtYbHlDLVFwbDhIcXNWUktqX3BvQnBaaXNmUW85VFg3UG94SU1MTF9iRWMwckthVHotUXNnbDFZTkRrbU5LN2RoUlF5djJFX2E2S01qTFVJY0N2bnkxZmdTTS1RYmc?oc=5" target="_blank" rel="noopener noreferrer">مسؤولو مانشستر سيتي يقيمون تشكيلة إنزو ماريسكا لاحتمال نجاح الدوري الممتاز ودوري أبطال أوروبا</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Man City Officials Assess Enzo Maresca&#x27;s Squad For Potential Premier League and UEFA Champions League Success - cityxtra.co.uk
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">يقوم مسؤولو مانشستر سيتي بتقييم تشكيلة إنزو ماريسكا للدوري الممتاز المحتمل ودوري أبطال أوروبا للنجاح cityxtra.co.uk</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T16:15</span>
+                        <a href="https://news.google.com/rss/articles/CBMi6gFBVV95cUxPZXN3NGVBOWJtaVhBX3dwcmo3bWpEcGlISUQ2NzhKSWVaZ1RkQmpOQnFjVmlYcFluWmdEZkF3VVlLWV9zQWtDaUVma1d2THcyc1dEbWlfUkoxOUFmblRvVDRLQUcxdC1RTWxTa1hlbndESHlBZ0ZIbTdHWHpNd00yUExUdlprQjVQY2ZJTmtYbHlDLVFwbDhIcXNWUktqX3BvQnBaaXNmUW85VFg3UG94SU1MTF9iRWMwckthVHotUXNnbDFZTkRrbU5LN2RoUlF5djJFX2E2S01qTFVJY0N2bnkxZmdTTS1RYmc?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="[watchlive] دوري أبطال أوروبا!] غلطة سراي - سبورتنج سي بي لايف ستريم &#x27;- 大分トリニータオフィシャルサイト [watchlive]uefa champions league!] galatasaray - sporting cp live stream&#x27; - 大分トリニータオフィシャルサイト دوري أبطال أوروبا الاتحاد الأوروبي لكرة القدم">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">36.5 / 100</span>
+                            <span class="badge badge-tag">دوري أبطال أوروبا</span><span class="badge badge-tag">الاتحاد الأوروبي لكرة القدم</span>
+                        </div>
+                        <span class="source-tag">Google News - UEFA Champions League &amp; Top Leagues</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMimAJBVV95cUxPZ01oMFZBM2pGSWtsY1ZLMWltM00wcXFvX2tOZS1FUDRxeDVfcUw0X1FfZm5XaUFVeTdqRnUtV25CTkZnMXdIaFFoRXFrU05ZZkZNUFRVeF9qRlRQbXpvYk9DNF84UFlpbW1vdkk5Zl93a0xRZGQ0X2ZzcVFLanNLa0VOX2dNZ0c1dUFKMm5YTFpMdWRSWUh1aTRUQ2lDOUhJbHVXY2lEb3RPSWR0eWtmYlB3ZGpHLXAtX2NrdFhSOTFYLTFjUmcwME1DemRXbXgyZFczRWJmT2hmZUV2U2lwM01WeWVaRU0wYWpxU2xWZWVhaXZMWm5IRjd5LUdVX2ZpaExUb0NfTVg0WHVTTHFyVTdaWksxNHJZ?oc=5" target="_blank" rel="noopener noreferrer">[WATCHLIVE] دوري أبطال أوروبا!] غلطة سراي - سبورتنج سي بي لايف ستريم &#x27;- 大分トリニータオフィシャルサイト</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> [WATCHLIVE]UEFA CHAMPIONS LEAGUE!] Galatasaray - Sporting CP live STReaM&#x27; - 大分トリニータオフィシャルサイト
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">[WATCHLIVE] دوري أبطال أوروبا!] غلطة سراي - سبورتنج سي بي لايف ستريم&#x27; 大分トリニータオフィシャルサイト</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T17:11</span>
+                        <a href="https://news.google.com/rss/articles/CBMimAJBVV95cUxPZ01oMFZBM2pGSWtsY1ZLMWltM00wcXFvX2tOZS1FUDRxeDVfcUw0X1FfZm5XaUFVeTdqRnUtV25CTkZnMXdIaFFoRXFrU05ZZkZNUFRVeF9qRlRQbXpvYk9DNF84UFlpbW1vdkk5Zl93a0xRZGQ0X2ZzcVFLanNLa0VOX2dNZ0c1dUFKMm5YTFpMdWRSWUh1aTRUQ2lDOUhJbHVXY2lEb3RPSWR0eWtmYlB3ZGpHLXAtX2NrdFhSOTFYLTFjUmcwME1DemRXbXgyZFczRWJmT2hmZUV2U2lwM01WeWVaRU0wYWpxU2xWZWVhaXZMWm5IRjd5LUdVX2ZpaExUb0NfTVg0WHVTTHFyVTdaWksxNHJZ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="عودة مانشستر يونايتد لدوري أبطال أوروبا: كيف يبدو النجاح ؟ man united&#x27;s champions league return: what does success look like? - espn singapore دوري أبطال أوروبا">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">26.5 / 100</span>
+                            <span class="badge badge-tag">دوري أبطال أوروبا</span>
+                        </div>
+                        <span class="source-tag">Google News - UEFA Champions League &amp; Top Leagues</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMirgFBVV95cUxQNTRCeHJ0X0pZSXR3ZFBLak04R0lZejRxY0Z4dFE4dk5PRmhteUhaTV9GSUxrTllZQVdrZDk2R2VoaTB3azBUdVlOREczbnFTZEY1Z2FsRHhzZGlXYlZqYnlYdHlURTkyeDcxT3NjQU1MSXNOUTJkTko5TGdfWURPVnlPQTZuajRUak8xbm5RbTBYSWJmanlwdTRsQVlKVENtSWVUMXBBRllDQjB3dGc?oc=5" target="_blank" rel="noopener noreferrer">عودة مانشستر يونايتد لدوري أبطال أوروبا: كيف يبدو النجاح ؟</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Man United&#x27;s Champions League return: What does success look like? - ESPN Singapore
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">عودة مانشستر يونايتد لدوري أبطال أوروبا: كيف يبدو النجاح ؟ إي إس بي إن سنغافورة</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T12:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMirgFBVV95cUxQNTRCeHJ0X0pZSXR3ZFBLak04R0lZejRxY0Z4dFE4dk5PRmhteUhaTV9GSUxrTllZQVdrZDk2R2VoaTB3azBUdVlOREczbnFTZEY1Z2FsRHhzZGlXYlZqYnlYdHlURTkyeDcxT3NjQU1MSXNOUTJkTko5TGdfWURPVnlPQTZuajRUak8xbm5RbTBYSWJmanlwdTRsQVlKVENtSWVUMXBBRllDQjB3dGc?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="تشيلسي مقابل ليدز على الهواء مباشرة! على السماء chelsea vs leeds live! on sky كرة القدم الأوروبية">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">15.8 / 100</span>
+                            <span class="badge badge-tag">كرة القدم الأوروبية</span>
+                        </div>
+                        <span class="source-tag">Sky Sports - Football News</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://www.skysports.com/football/chelsea-vs-leeds-united/live/577586" target="_blank" rel="noopener noreferrer">تشيلسي مقابل ليدز على الهواء مباشرة! على السماء</a>
+                    </h3>
+                    <div class="original-title-ref">
+                        <span>Original:</span> Chelsea vs Leeds LIVE! on Sky
+                    </div>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">تشيلسي مقابل ليدز على الهواء مباشرة! على السماء</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T16:30</span>
+                        <a href="https://www.skysports.com/football/chelsea-vs-leeds-united/live/577586" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            قراءة المصدر كاملاً ↗
+                        </a>
+                    </div>
+                </article>
+                
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            تم التوليد تلقائياً بواسطة <b>AI & Sports Autonomous Watchdog</b> في 2026-09-09 19:17 UTC • متوافق مع تيليجرام وجدولة Antigravity
+        </footer>
+    </div>
+
+    <script>
+        function filterNews() {
+            const query = document.getElementById('liveSearch').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.news-card');
+            cards.forEach(card => {
+                const searchData = card.getAttribute('data-search') || '';
+                if (!query || searchData.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

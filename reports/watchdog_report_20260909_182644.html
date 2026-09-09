@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الرصد والذكاء الإخباري | AI & Sports Watchdog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --bg-surface: #111827;
+            --bg-card: rgba(17, 24, 39, 0.75);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --tech-glow: #06b6d4;
+            --sports-glow: #ec4899;
+            --accent-barca: #a50044;
+            --radius-xl: 18px;
+            --radius-md: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(236, 72, 153, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Bar */
+        header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(16px);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .brand-title h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-title p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .metrics-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .metric-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Search & Filter Bar */
+        .toolbar {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 280px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            padding: 0.85rem 1.25rem;
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--tech-glow);
+            box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+        }
+
+        /* Two-Column Grid */
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .tracks-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .track-column {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius-xl);
+            padding: 1.75rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .track-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 1.5rem;
+        }
+
+        .track-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .track-tech h2 { color: #38bdf8; }
+        .track-sports h2 { color: #f472b6; }
+
+        .track-summary {
+            background: rgba(255, 255, 255, 0.03);
+            border-right: 4px solid var(--tech-glow);
+            padding: 0.85rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #d1d5db;
+            margin-bottom: 1.5rem;
+        }
+
+        .track-sports .track-summary {
+            border-right-color: var(--sports-glow);
+        }
+
+        /* Cards Styling */
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .news-card {
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .badges-row {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            color: #fff;
+        }
+
+        .badge-score {
+            font-family: 'JetBrains Mono', monospace;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .badge-tag {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .source-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .news-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            line-height: 1.45;
+            margin-bottom: 0.75rem;
+        }
+
+        .news-title a {
+            color: var(--text-main);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .news-title a:hover {
+            color: #38bdf8;
+        }
+
+        .takeaway-box {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            margin-bottom: 0.85rem;
+            align-items: flex-start;
+        }
+
+        .takeaway-icon {
+            font-size: 0.95rem;
+            color: #f59e0b;
+        }
+
+        .takeaway-text {
+            font-size: 0.85rem;
+            color: #d1d5db;
+            line-height: 1.4;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .read-btn {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.1);
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .read-btn:hover {
+            background: rgba(56, 189, 248, 0.25);
+            color: #fff;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding-bottom: 2rem;
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand-title">
+                <h1>🛡️ وكيل الرصد والذكاء الإخباري الشامل</h1>
+                <p>Autonomous AI & European Sports Watchdog | تقرير دوري ذكي وموجز تنفيذي</p>
+            </div>
+            <div class="metrics-bar">
+                <div class="metric-pill">
+                    <div class="metric-val">556</div>
+                    <div class="metric-label">إجمالي الأخبار المفحوصة</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">551</div>
+                    <div class="metric-label">الأخبار الجديدة</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">10</div>
+                    <div class="metric-label">أهم الاختيارات</div>
+                </div>
+                <div class="metric-pill">
+                    <div class="metric-val">100%</div>
+                    <div class="metric-label">حالة النظام</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="toolbar">
+            <input type="text" id="liveSearch" class="search-input" placeholder="🔍 ابحث في العناوين والكلمات المفتاحية (مثل: Gemini, Barcelona, Yamal, Claude, Apple)..." onkeyup="filterNews()">
+        </div>
+
+        <!-- Two Track Layout -->
+        <div class="tracks-grid">
+            <!-- Track 1: Tech & AI -->
+            <section class="track-column track-tech">
+                <div class="track-header">
+                    <h2>🤖 قطاع التقنية والذكاء الاصطناعي</h2>
+                    <span class="badge" style="background: var(--tech-glow);">أهم 5 أحداث</span>
+                </div>
+                <div class="track-summary">
+                    Scanned 5 prioritized breakthroughs in AI and Big Tech. Key developments focus around &#x27;Artificial Intelligence&#x27;, &#x27;Claude&#x27;, &#x27;Samsung&#x27;. Highest rated headline: &#x27;Artificial Intelligence &quot;could kill us all by the end of the decade&quot;: Anthropic and OpenAI are &quot;gambling with our lives&quot;, says former researcher - Gamereactor UK&#x27; (Score: 72.0/100).
+                </div>
+                <div class="cards-list">
+                    
+                <article class="news-card" data-category="tech_ai" data-search="artificial intelligence &quot;could kill us all by the end of the decade&quot;: anthropic and openai are &quot;gambling with our lives&quot;, says former researcher - gamereactor uk artificial intelligence &quot;could kill us all by the end of the decade&quot;: anthropic and openai are &quot;gambling with our lives&quot;, says former researcher gamereactor uk">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">72.0 / 100</span>
+                            <span class="badge badge-tag">Artificial Intelligence</span><span class="badge badge-tag">Anthropic</span><span class="badge badge-tag">Openai</span>
+                        </div>
+                        <span class="source-tag">Google News - AI &amp; LLMs (Gemini, ChatGPT, Claude)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMihAJBVV95cUxPTWNyWGpVV1JzRVgwT1dBZklaT0RrTnNkQ21KbklzVXBuMDJobWFhd0dmNnBBa3E3RkRyd1ltaWU4eGx6ZXRlWGZLbFItNUJZdUtnRTBjQ2N2Q2tmY1FyVVh6Y1dVUVdTVFhyaHhfSTdGQUtYY0pGVnhrQklnUmVYN0prZUM0TkxnaDktQXBZUGRwY1FodllhYV9kZ2ZMTkE2MXQ5bE9Oek1WMEFSbmtWMVptVmkzZnBkRDhVcmlnY19sd3VFTkhaN3E3UXc3a1dzTHZLMjRPUXhUVmNYN3Z6Uk1qUUlEOEZxdzRPOVFVekdvVWtVdlVxck5Ja1ZIV2w1Wk9NWQ?oc=5" target="_blank" rel="noopener noreferrer">Artificial Intelligence &quot;could kill us all by the end of the decade&quot;: Anthropic and OpenAI are &quot;gambling with our lives&quot;, says former researcher - Gamereactor UK</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Artificial Intelligence &quot;could kill us all by the end of the decade&quot;: Anthropic and OpenAI are &quot;gambling with our lives&quot;, says former researcher Gamereactor UK</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T09:19</span>
+                        <a href="https://news.google.com/rss/articles/CBMihAJBVV95cUxPTWNyWGpVV1JzRVgwT1dBZklaT0RrTnNkQ21KbklzVXBuMDJobWFhd0dmNnBBa3E3RkRyd1ltaWU4eGx6ZXRlWGZLbFItNUJZdUtnRTBjQ2N2Q2tmY1FyVVh6Y1dVUVdTVFhyaHhfSTdGQUtYY0pGVnhrQklnUmVYN0prZUM0TkxnaDktQXBZUGRwY1FodllhYV9kZ2ZMTkE2MXQ5bE9Oek1WMEFSbmtWMVptVmkzZnBkRDhVcmlnY19sd3VFTkhaN3E3UXc3a1dzTHZLMjRPUXhUVmNYN3Z6Uk1qUUlEOEZxdzRPOVFVekdvVWtVdlVxck5Ja1ZIV2w1Wk9NWQ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="why i built another yt-dlp gui (and why i think it was worth it) i&#x27;m new to the world of open source development, at least as an author. this is mostly because it has always felt like whatever tool i need, someone has already made it. it makes it seem like any tool i can think of is an internet search away, be it for my professional needs or my personal hobbies. this notion was challenged last year when i was looking for a good tool to backup my favorite youtube videos and playlists locally, on a better level than simply downloading video files. in a way, i was right. there are definitely options for what i wanted, but in different extremes. one side was the self-hosted tools that could completely set up a containerized vm in your own machine or self-hosted setup, where you can save anything you want. now, i&#x27;m someone who cares deeply about preservation of art and expression, but i don&#x27;t have the resources to set up a whole self-hosted stack, and doing the whole rigamarole of setting it up on my personal computer feels like hammering a nail with a mallet. the other side of the spectrum was fully local options that sometimes had more or fewer features: downloading subtitles, different language audio tracks, queuing downloads, embedding metadata, and more. but all were still falling short of what i was really looking for. what i really needed was solving an issue i&#x27;ve had with youtube for years. jump to: one (more) reason i hate youtube so what exactly did i build? the app and its features building the app architecture why is this app different licensing and gpl a disclosure links one (more) reason i hate youtube here i am, on one of those days i&#x27;m feeling nostalgic and want to kill some time, and i find myself checking youtube playlists. there i see my favorites, a list of videos i&#x27;ve been expanding since my youth, and i encounter the worst thing youtube does to its userbase: an &quot;8 hidden videos&quot; legend at the bottom of the list. i haven&#x27;t played all of my favorites list in years, and if you put a gun to my head there&#x27;s no way i could remember what i&#x27;m missing. but i know one thing: if i put it there, it&#x27;s because it meant something special to me at some point, and now i have no idea what it was. i honestly think this specific practice, of professionally gaslighting their own userbase, is one of the worst things a platform can do to its users. you should have the right to delete, privatize, or hide videos from your platform, but it&#x27;s my opinion that you shouldn&#x27;t just lock away the information of what was in it. i&#x27;m pretty sure most of them were bits from comedians i liked, or maybe an animation from someone i&#x27;ve since forgotten about. i will never know now, because youtube sucks at transparency on this (and in lots of other levels too). this is the impetus that had me looking around for a tool that would let me actually save this kind of data, with varying levels of flexibility. so what exactly did i build? now that you know my very specific, glorified pet peeve, the rest of the story is simple. in 2025, when i searched for this tool, i didn&#x27;t find it, and having some time on my hands, i figured this was a good time to get some coding hours working on a project that does exactly this. i read up on yt-dlp&#x27;s documentation and shopped around for alternative ui libraries. with yt-dlp being written in python, i tried some desktop technologies for python, but i wasn&#x27;t very happy with them, and i didn&#x27;t think they&#x27;d have the flexibility i needed if i ever wanted to expand the design. eventually i landed on electron as my platform, since it offers good cross-platform support, has a fairly big community and it has very good ui to os communication with ipc. i picked react as my ui library, since i&#x27;d already been working with it for the last five years, and typescript mostly because i wanted to try it out, to be honest. with my pieces in place, i began actually building the app that i eventually called sloth archiver, to evoke the core principle of the design of keeping things simple and easy to use for the lazy archivist like myself whenever possible. the app and its features i iterated as i went along but there were some seminal features that i knew for sure i wanted this app to have: saving the actual video metadata, saving whole playlists, downloading in any quality and with the option of downloading as mp3, and one that seemed to trip up a lot of the tools i used to use for video download: being able to actually handle long, and i mean really long videos. for some reason a lot of downloader apps really trip up with this specific step. i&#x27;m not sure if they use some faulty wrapper on top of yt-dlp or just never test for weirdos like me who want to download 10 hour videos every once in a while but this made it one of the goals to make sure my app could handle. building on top of this download framework the next layer came natural. i need to put the metadata somewhere so i&#x27;ll build a local library view where all the metadata can be shown. this library will naturally grow so it&#x27;s gonna need some search and filtering features. this library should naturally also have a built in player, for both the youtube video and the local video if you have it. building further on top of this, if the video download already support converting videos with ffmpeg why not offer this as a feature of the library itself? each video can be converted, extracted to mp3. hell we can even have a clipping feature allowing you to clip your favorite parts of that 10 hour video you downloaded the other day! of course this clipping feature will need a clip collection in the ui, this is supposed to be an archive after all. and why not use the flexibility of react to actually build a custom video player component in which we can have some of the features like the clipping tool? yes, now it&#x27;s all coming together. this is good and all but how does this archive save the data? i&#x27;m a very simple guy with straightforward ideas. when i think of an archive in my machine i want to know i have full control of it. which is why i wanted to make all of this work completely on filesystem and preferably as decoupled as possible from the program. in theory if you move your entire library to a different machine you will still have it all organized how you left it opening the app in this new system. if you get tired of this app and just want to keep everything in files because my ui pissed you off or something then uninstall it and enjoy your organized library files without issue. the point is total freedom and not dealing with dockerfiles, vms or manually organizing a dozen files you downloaded and forgetting where you put them building the app architecture (note: if you&#x27;re not into the technical details, feel free to skip ahead →) on the technical level, the functionality is not complicated: the react ui is mounted on electron, a multiplatform desktop application framework. which allows my ui to have communication channels with the os through electron&#x27;s ipc module to do things like requesting filesystem changes, os information, and critically, executing child processes. this is where yt-dlp and ffmpeg come into play. yt-dlp is a very popular download engine for youtube and thousands of other platforms, it&#x27;s very powerful and constantly maintained, if you download videos from youtube anywhere there&#x27;s a good chance it was powered by it. in the app this is the child process that handles the actual downloads and some subprocesses like converting to mp3 on the fly after a download. ffmpeg is also a very powerful tool used everywhere but this one is for multimedia processing. it allows manipulating video, audio and even images through command line in many, many ways that would take too long to explain but in the app this powers all of the video manipulation tools in it. these child processes do the heavy media file lifting while the rest of the ipc functions do all the filesystem archiving so connecting these elements we have a ui on top of a video downloader and more importantly working at cli level means we can handle pretty much anything the cli can handle as long as we implement it correctly. auto updating yt-dlp the next thing everyone that used yt-dlp or any of the tools that implement it will know is that we need to constantly update it since google is in a constant war for hoarding information and not letting anyone get to it which means any video downloader worth anything needs a yt-dlp updater. for this i iterated several solutions, my first dev build was just running the system&#x27;s own python module to do some initial tests but later on a packaged build would contain built binaries of the cli which would evolve into fetching the pre-built binaries from the yt-dlp repo. which i&#x27;m sure everyone who works in these type of apps knew from the start but give me a break i don&#x27;t like reading, ok. of course downloading binaries has the small caveat that a sha hash validation is in order which is already provided with the release so it&#x27;s a matter of setting up that validation. eventually all of this download and validation was set up into the app and now updating yt-dlp is one click away whenever the user needs it. youtube strikes back (constantly) another thing that maybe people really familiar with yt-dlp see as obvious but i honestly had no idea about, mostly because of a period of development hiatus around this update, is the fact that yt-dlp now required a node/js runtime to run some of the modern youtube validation challenges. when finally resuming work on the project this was one of the first issues to solve. my initial thought was packaging a js runtime like deno or bun with the app, but investigating further led me to find it&#x27;s possible to use electron&#x27;s own mounted runtime as node and this allows yt-dlp to have its node runtime without making the packaged app heavier. this is something that at time of writing i&#x27;m still experimenting and running tests on to find out if a completely new sandboxed runtime is worth packaging for the use case or not. this architecture model has remained unchanged until time of writing with the mindset of keeping the app simple, flexible and decoupled from the system without sacrificing good engineering practices. this architecture however can evolve as the technology requires or improvements are found as the project grows why is this app different than the rest in many ways it&#x27;s not very different than the rest, but it has the features i really wanted for a tool like this and no one seems to have made. if i was doing a commercial pitch i would call the selling point the library and all its small features and potential to expand. i&#x27;ll be the first to admit some tools out there are much more mature in some aspects, but none of them are even aimed at offering this combination of features, and i got tired of waiting for someone to make it happen; it&#x27;s easier to build up the maturity of the download tool and grow my own app so i went for it. so who do i think this app is for? for people who like having their videos saved but don&#x27;t want to go hunting through folders to find. you can add videos to the library then search, label, order and explore through your library and even play the video in an embedded local player for people who like or need downloading, clipping, converting, organizing videos of all sorts to make compilations, archival copies, reuploads, remixes or any type of transformative work with a high quality copy of the original source material. you can download at any available resolution then clip, convert, extract mp3 of the source video without losing any quality. for people who save videos because they hate when they get censored or edited down to comply to whatever draconian life ruining terms of service update youtube will cook up next. you can download versions of videos in different timestamps and keep both with this app for people who want to keep their favorite youtube playlists saved and not worry about losing the data to the dreaded &quot;x videos hidden&quot; label at the bottom. you add your playlist and keep it synced with the app and update it whenever you want, if any videos are hidden your local copy won&#x27;t be affected. if you fall within any of these kinds of users maybe you will like this app. if not then maybe keep an eye on it and i&#x27;ll win you over on the next update. about licensing and why i chose gpl to me this was the boring part but obviously if i didn&#x27;t license under mit and call it a day then i must have some reason for it, right? while looking at the current market of solutions and apps related to youtube and video download in general it seems like there&#x27;s plenty of projects trying to paywall this kind of functionality. i personally don&#x27;t like this, since the heavy lifting is done by yt-dlp and its community. following this train of logic i decided to license this under gpl just to make sure if this ever were to grow or catch the attention of many people the free and open source spirit of the project isn&#x27;t lost in the future. in my mind these kind of projects should reflect what the intention of archiving and downloading media from the web is, a vehicle to preservation of art, expression and ideas. something to disclose before the end i feel the need to disclose this since it&#x27;s a hot topic in internet spaces. i implemented a lot of the code using claude as a code agent to speed up the implementation of features. i&#x27;m a professional developer with years of experience designing and implementing solutions for enterprise software. by my own principle i don&#x27;t let agents run wild and add features without specifying exactly what i need and testing and fine tuning every detail myself, but i realize people have a wide range of views about llm usage in the dev space. so i leave this section here for full transparency wrapping up with nothing more to add i can only thank you for even taking the time to read my article and i hope i can build this project up more and more in the near future. if you&#x27;d like to know more i leave the appropriate links down below. thank you and have a nice day. check it out 🌐 info page: slothsoftworks.github.io/slotharchiver.info 🔗 repo: github.com/slothsoftworks/sloth-archiver if you try it out, run into issues, or have feature ideas, opening an issue on the repo is the best way to reach me. feedback from actual use is what&#x27;s going to shape where this goes next. thanks for reading. here&#x27;s a sloth credit for images used: https://www.pexels.com/photo/close-up-of-hard-disk-drives-on-white-surface-32920312/ https://www.pexels.com/photo/gentle-sloth-in-lush-green-tropical-forest-32896689/">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">69.0 / 100</span>
+                            <span class="badge badge-tag">Claude</span><span class="badge badge-tag">Llm</span>
+                        </div>
+                        <span class="source-tag">Dev.to - Developer Ecosystem</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://dev.to/slothdev/why-i-built-another-yt-dlp-gui-and-why-i-think-it-was-worth-it-h9f" target="_blank" rel="noopener noreferrer">Why I Built Another yt-dlp GUI (And Why I Think It Was Worth It)</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">I&#x27;m new to the world of open source development, at least as an author</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T13:08</span>
+                        <a href="https://dev.to/slothdev/why-i-built-another-yt-dlp-gui-and-why-i-think-it-was-worth-it-h9f" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="samsung invests $3.5 billion in &#x27;europe&#x27;s openai&#x27; mistral ai to co-develop semiconductor-specialized ai - finance.biggo.com samsung invests $3.5 billion in &#x27;europe&#x27;s openai&#x27; mistral ai to co-develop semiconductor-specialized ai finance.biggo.com">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">64.5 / 100</span>
+                            <span class="badge badge-tag">Samsung</span><span class="badge badge-tag">Mistral</span><span class="badge badge-tag">Openai</span>
+                        </div>
+                        <span class="source-tag">Google News - Tech Giants (Google, Apple, Samsung)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMidkFVX3lxTE9jdWtJZ2swbkxtRTI2TTZxYWEyWUJIR3NEYVdSYVFpQnQ5OUltT1N0LUo0T2VLbTF3T21iRHV5dF9XcmFGQlEtRS1mNkFJVVBwdU1Ea0ZSdkQtcWVESTFFZktwd3RfSzY1NGJxY1RCMjg3RWY5cWc?oc=5" target="_blank" rel="noopener noreferrer">Samsung Invests $3.5 Billion in &#x27;Europe&#x27;s OpenAI&#x27; Mistral AI to Co-Develop Semiconductor-Specialized AI - finance.biggo.com</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Samsung Invests $3.5 Billion in &#x27;Europe&#x27;s OpenAI&#x27; Mistral AI to Co-Develop Semiconductor-Specialized AI finance.biggo.com</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-08T15:25</span>
+                        <a href="https://news.google.com/rss/articles/CBMidkFVX3lxTE9jdWtJZ2swbkxtRTI2TTZxYWEyWUJIR3NEYVdSYVFpQnQ5OUltT1N0LUo0T2VLbTF3T21iRHV5dF9XcmFGQlEtRS1mNkFJVVBwdU1Ea0ZSdkQtcWVESTFFZktwd3RfSzY1NGJxY1RCMjg3RWY5cWc?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="openai announces cooperation with samsung on next-generation chips - ua.news openai announces cooperation with samsung on next-generation chips ua.news">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">60.5 / 100</span>
+                            <span class="badge badge-tag">Announces</span><span class="badge badge-tag">Samsung</span><span class="badge badge-tag">Openai</span>
+                        </div>
+                        <span class="source-tag">Google News - Tech Giants (Google, Apple, Samsung)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMipgFBVV95cUxQclBiajZZRVJrTU9WXzVoUXhUWjk1SHZIUkNxa1ZTNjhHMkFKdVRrdWNQMko0amxnQUlFQUx1dWpSaVViQXBXX0NOOTZGRDRBUU5WdnhJNFFmZE4zdUNldXNMR0lPLUJ0X2dheWJkT3NKeUo2TlNGSXJlTTVQMlJGLTBId1dkWlVlZnpkUFRKc29tSVVib1RISmJlR0hmRXZ6Qkd2NU1B?oc=5" target="_blank" rel="noopener noreferrer">OpenAI announces cooperation with Samsung on next-generation chips - UA.NEWS</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">OpenAI announces cooperation with Samsung on next-generation chips UA.NEWS</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T04:31</span>
+                        <a href="https://news.google.com/rss/articles/CBMipgFBVV95cUxQclBiajZZRVJrTU9WXzVoUXhUWjk1SHZIUkNxa1ZTNjhHMkFKdVRrdWNQMko0amxnQUlFQUx1dWpSaVViQXBXX0NOOTZGRDRBUU5WdnhJNFFmZE4zdUNldXNMR0lPLUJ0X2dheWJkT3NKeUo2TlNGSXJlTTVQMlJGLTBId1dkWlVlZnpkUFRKc29tSVVib1RISmJlR0hmRXZ6Qkd2NU1B?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="tech_ai" data-search="apple expected to announce the biggest iphone update in its history, as new ceo john ternus prepares launch of foldable device - yahoo finance apple expected to announce the biggest iphone update in its history, as new ceo john ternus prepares launch of foldable device yahoo finance">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);">56.5 / 100</span>
+                            <span class="badge badge-tag">Launch</span><span class="badge badge-tag">Update</span><span class="badge badge-tag">Apple</span>
+                        </div>
+                        <span class="source-tag">Google News - Tech Giants (Google, Apple, Samsung)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMioAFBVV95cUxQRTR4WkhaME5ad2VnaVBRZ3ZLVHEyU19rQ1Boakc2TFNYRG5wV0trTWdmMzRuNkJFRXAtYU5fQkthSHhBVC02RUVrZFVqRnR3SGIzS21qWTJpRjBOdTZCQXhrcVdWS0xBVGJ5TWpKWXp0UFFYVGpYMmF4RUh1djVxZ2F2YjJvb19ENElqcTVieGRDUlJrd2NFbDVvRXItempY?oc=5" target="_blank" rel="noopener noreferrer">Apple expected to announce the biggest iPhone update in its history, as new CEO John Ternus prepares launch of foldable device - Yahoo Finance</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Apple expected to announce the biggest iPhone update in its history, as new CEO John Ternus prepares launch of foldable device Yahoo Finance</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-09-09T05:05</span>
+                        <a href="https://news.google.com/rss/articles/CBMioAFBVV95cUxQRTR4WkhaME5ad2VnaVBRZ3ZLVHEyU19rQ1Boakc2TFNYRG5wV0trTWdmMzRuNkJFRXAtYU5fQkthSHhBVC02RUVrZFVqRnR3SGIzS21qWTJpRjBOdTZCQXhrcVdWS0xBVGJ5TWpKWXp0UFFYVGpYMmF4RUh1djVxZ2F2YjJvb19ENElqcTVieGRDUlJrd2NFbDVvRXItempY?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+                </div>
+            </section>
+
+            <!-- Track 2: Sports & FC Barcelona -->
+            <section class="track-column track-sports">
+                <div class="track-header">
+                    <h2>⚽ قطاع الرياضة وكرة القدم الأوروبية</h2>
+                    <span class="badge" style="background: var(--sports-glow);">أهم 5 أحداث</span>
+                </div>
+                <div class="track-summary">
+                    Monitored European football with special emphasis on FC Barcelona (5 key updates). Top headline: &#x27;Hansi Flick’s Past Comments Explain Barcelona’s Latest Transfer Target - Sports Illustrated&#x27; (Score: 100.0/100).
+                </div>
+                <div class="cards-list">
+                    
+                <article class="news-card" data-category="sports" data-search="hansi flick’s past comments explain barcelona’s latest transfer target - sports illustrated hansi flick’s past comments explain barcelona’s latest transfer target sports illustrated">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">100.0 / 100</span>
+                            <span class="badge badge-tag">FC Barcelona</span><span class="badge badge-tag">Hansi Flick</span><span class="badge badge-tag">Transfer</span>
+                        </div>
+                        <span class="source-tag">Google News - FC Barcelona (Exclusive &amp; Transfers)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMilwFBVV95cUxNd0VCVjQ3YlNVSHplLWs3Mml1TDhtOWRlbEk4VGZ3RjlIS0lEMWFEQ2hDT1RBRnFHNWk2SUQwSG9JdU41MmVsY080QTdPcXBrbVNjXzRoQ3FWSDRMNUtENHVLZWZzU21GWUJVTjcySy1CdDZQRm9RcEtFSnJOOC1XYzUxU0x0akZnbHJWTzVvQko4NjdBWmVJ?oc=5" target="_blank" rel="noopener noreferrer">Hansi Flick’s Past Comments Explain Barcelona’s Latest Transfer Target - Sports Illustrated</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Hansi Flick’s Past Comments Explain Barcelona’s Latest Transfer Target Sports Illustrated</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-07-09T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMilwFBVV95cUxNd0VCVjQ3YlNVSHplLWs3Mml1TDhtOWRlbEk4VGZ3RjlIS0lEMWFEQ2hDT1RBRnFHNWk2SUQwSG9JdU41MmVsY080QTdPcXBrbVNjXzRoQ3FWSDRMNUtENHVLZWZzU21GWUJVTjcySy1CdDZQRm9RcEtFSnJOOC1XYzUxU0x0akZnbHJWTzVvQko4NjdBWmVJ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="‘it could be we’re missing something’ - hansi flick offers barcelona transfer update amid rodri and julian alvarez talk - barcablaugranes.com ‘it could be we’re missing something’ - hansi flick offers barcelona transfer update amid rodri and julian alvarez talk barcablaugranes.com">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">100.0 / 100</span>
+                            <span class="badge badge-tag">FC Barcelona</span><span class="badge badge-tag">Hansi Flick</span><span class="badge badge-tag">Transfer</span>
+                        </div>
+                        <span class="source-tag">Google News - FC Barcelona (Exclusive &amp; Transfers)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMiuAFBVV95cUxOSU1sN2xvd0t1LU1LMWNhR2VNaDhSV05fTUF1Ymt5SkxlU0JRcWtwSWIxb3o2d1hZWEdUZk5oZE5IalFIY2ZzdmNLXzR3UnU3T2dlQVhXXzhzXzdEZ0ZoeEhWeXpIT0Z4RldheGpUWUotQUVVb2VvSVc5cU9SN2ZRdG91Q0N6cGVTNXdCQmo1V24yRHBiNXJWSmlmYkM2N25mbjJLeTRIdlJhcG5OR1J0bGhuWGdfd2dJ?oc=5" target="_blank" rel="noopener noreferrer">‘It could be we’re missing something’ - Hansi Flick offers Barcelona transfer update amid Rodri and Julian Alvarez talk - barcablaugranes.com</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">‘It could be we’re missing something’ - Hansi Flick offers Barcelona transfer update amid Rodri and Julian Alvarez talk barcablaugranes.com</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-08-16T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMiuAFBVV95cUxOSU1sN2xvd0t1LU1LMWNhR2VNaDhSV05fTUF1Ymt5SkxlU0JRcWtwSWIxb3o2d1hZWEdUZk5oZE5IalFIY2ZzdmNLXzR3UnU3T2dlQVhXXzhzXzdEZ0ZoeEhWeXpIT0Z4RldheGpUWUotQUVVb2VvSVc5cU9SN2ZRdG91Q0N6cGVTNXdCQmo1V24yRHBiNXJWSmlmYkM2N25mbjJLeTRIdlJhcG5OR1J0bGhuWGdfd2dJ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="hansi flick talks barcelona’s hunt for a no. 9 and plays down signing another defender - barcablaugranes.com hansi flick talks barcelona’s hunt for a no. 9 and plays down signing another defender barcablaugranes.com">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">100.0 / 100</span>
+                            <span class="badge badge-tag">FC Barcelona</span><span class="badge badge-tag">Hansi Flick</span><span class="badge badge-tag">Signing</span>
+                        </div>
+                        <span class="source-tag">Google News - FC Barcelona (Exclusive &amp; Transfers)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMi5gFBVV95cUxQZ2l4UmgzMU00YjFWTWo1MkZOY1RqN2FRWUo4dFIwZDRJV2w5S2pLUHIzY3NubUJlcGROaTQ5RUdGaXhvVWw5WWJhNjdYZFFwdHlWRFBfZVM3V1hKUkwzUGFqR1hGWlJmbldmY3FfMXZTUHZzQXA0TEZib0RFemtHeC1ZSVI5am4zUnZ3QTNwVTQ4S2d3a1RkSElxZlprSllFc0ZhSGp2Uk9JNHBhLXBYSzc3U0NYY0NRNVdpa2lXZ3cyUTMzSHRudlpFWk5LbG05el9EeTJyNko3M1ZLN1k2aF9uakd5dw?oc=5" target="_blank" rel="noopener noreferrer">Hansi Flick talks Barcelona’s hunt for a No. 9 and plays down signing another defender - barcablaugranes.com</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Hansi Flick talks Barcelona’s hunt for a No</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-08-26T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMi5gFBVV95cUxQZ2l4UmgzMU00YjFWTWo1MkZOY1RqN2FRWUo4dFIwZDRJV2w5S2pLUHIzY3NubUJlcGROaTQ5RUdGaXhvVWw5WWJhNjdYZFFwdHlWRFBfZVM3V1hKUkwzUGFqR1hGWlJmbldmY3FfMXZTUHZzQXA0TEZib0RFemtHeC1ZSVI5am4zUnZ3QTNwVTQ4S2d3a1RkSElxZlprSllFc0ZhSGp2Uk9JNHBhLXBYSzc3U0NYY0NRNVdpa2lXZ3cyUTMzSHRudlpFWk5LbG05el9EeTJyNko3M1ZLN1k2aF9uakd5dw?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="hansi flick drops barcelona transfer hint - yahoo sports hansi flick drops barcelona transfer hint yahoo sports">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">100.0 / 100</span>
+                            <span class="badge badge-tag">FC Barcelona</span><span class="badge badge-tag">Hansi Flick</span><span class="badge badge-tag">Transfer</span>
+                        </div>
+                        <span class="source-tag">Google News - FC Barcelona (Exclusive &amp; Transfers)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMijgFBVV95cUxPNlFSNVR2eHBYTkdVek94X2R1akhYR2Ezd2FaSTZVekNDdE1iSFRrakl1UE9ORUYzUlJfaWdhdUdGN2FMSThVWDdZaW9iS21xdDNhR2wxQXJyWUU2QkNKZHZiX2xYSUVvSlM5Z0NXamRNZ0hTUEkteVJ4OERzTk9EVWtoV0pjTWpRV0tLOThB?oc=5" target="_blank" rel="noopener noreferrer">Hansi Flick drops Barcelona transfer hint - Yahoo Sports</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">Hansi Flick drops Barcelona transfer hint Yahoo Sports</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-08-16T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMijgFBVV95cUxPNlFSNVR2eHBYTkdVek94X2R1akhYR2Ezd2FaSTZVekNDdE1iSFRrakl1UE9ORUYzUlJfaWdhdUdGN2FMSThVWDdZaW9iS21xdDNhR2wxQXJyWUU2QkNKZHZiX2xYSUVvSlM5Z0NXamRNZ0hTUEkteVJ4OERzTk9EVWtoV0pjTWpRV0tLOThB?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+
+                <article class="news-card" data-category="sports" data-search="‘barcelona was my first choice’ - rodri talks hansi flick, sergio busquets and marc bernal after transfer - barcablaugranes.com ‘barcelona was my first choice’ - rodri talks hansi flick, sergio busquets and marc bernal after transfer barcablaugranes.com">
+                    <div class="card-header">
+                        <div class="badges-row">
+                            <span class="badge badge-score" style="background: linear-gradient(135deg, #ec4899, #ef4444);">100.0 / 100</span>
+                            <span class="badge badge-tag">FC Barcelona</span><span class="badge badge-tag">Hansi Flick</span><span class="badge badge-tag">Transfer</span>
+                        </div>
+                        <span class="source-tag">Google News - FC Barcelona (Exclusive &amp; Transfers)</span>
+                    </div>
+                    <h3 class="news-title">
+                        <a href="https://news.google.com/rss/articles/CBMigwJBVV95cUxNRzJ5MEpiLUY1aVJMX3RfTEtBTnVPUHdjdURxalhOa3FhSzlOdWNJd05fQmhYSmZGOVRpVFVMUW9tNGJOcnh3UnV2RmJCU1ZwZHh4U2ZXRktfOHpTU1l1X0J3ckJLWVBsZjFJYnk1eUNDUEtYVnlhNGN1bWNMZ1ZxU0NqYUNNem14NTZacE92OXZ1amRyWTBaRVZaZVVhNkw1YWFJSW95TFdRRTc1UTdiNlJ0ZWVsSVFZYmVvc3Vlb3hWWnFQVmxHQWFsQWxqTmN1ZGQzN0tmcVF5clk4QWc0Q0hfM1Z4VkJoTE9EZG11ZEN2MWJkRUdMQmZORFdJbks3QzVZ?oc=5" target="_blank" rel="noopener noreferrer">‘Barcelona was my first choice’ - Rodri talks Hansi Flick, Sergio Busquets and Marc Bernal after transfer - barcablaugranes.com</a>
+                    </h3>
+                    <div class="takeaway-box">
+                        <span class="takeaway-icon">⚡</span>
+                        <p class="takeaway-text">‘Barcelona was my first choice’ - Rodri talks Hansi Flick, Sergio Busquets and Marc Bernal after transfer barcablaugranes.com</p>
+                    </div>
+                    <div class="card-footer">
+                        <span class="pub-date">🕒 2026-08-18T05:00</span>
+                        <a href="https://news.google.com/rss/articles/CBMigwJBVV95cUxNRzJ5MEpiLUY1aVJMX3RfTEtBTnVPUHdjdURxalhOa3FhSzlOdWNJd05fQmhYSmZGOVRpVFVMUW9tNGJOcnh3UnV2RmJCU1ZwZHh4U2ZXRktfOHpTU1l1X0J3ckJLWVBsZjFJYnk1eUNDUEtYVnlhNGN1bWNMZ1ZxU0NqYUNNem14NTZacE92OXZ1amRyWTBaRVZaZVVhNkw1YWFJSW95TFdRRTc1UTdiNlJ0ZWVsSVFZYmVvc3Vlb3hWWnFQVmxHQWFsQWxqTmN1ZGQzN0tmcVF5clk4QWc0Q0hfM1Z4VkJoTE9EZG11ZEN2MWJkRUdMQmZORFdJbks3QzVZ?oc=5" target="_blank" rel="noopener noreferrer" class="read-btn">
+                            اقرأ المصدر ↗
+                        </a>
+                    </div>
+                </article>
+                
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            تم التوليد تلقائياً بواسطة <b>AI & Sports Autonomous Watchdog</b> في 2026-09-09 15:26 UTC • متوافق مع مهام Antigravity المجدولة
+        </footer>
+    </div>
+
+    <script>
+        function filterNews() {
+            const query = document.getElementById('liveSearch').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.news-card');
+            cards.forEach(card => {
+                const searchData = card.getAttribute('data-search') || '';
+                if (!query || searchData.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
