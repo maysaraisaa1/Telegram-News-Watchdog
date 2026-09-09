@@ -22,10 +22,182 @@ class ReportNotifier:
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
     # =========================================================================
+    # 0. Public HTML Report & Telegraph Publishing Engines
+    # =========================================================================
+    def publish_html_dashboard(self, file_path: Path) -> Optional[str]:
+        """
+        Uploads the HTML dashboard to a direct-serving service (dpaste.com .raw)
+        which serves with 'Content-Type: text/html; charset=UTF-8' so browsers
+        render the full interactive graphic dashboard directly instead of raw code.
+        """
+        if not file_path or not file_path.exists():
+            return None
+
+        # Provider 1: dpaste.com (Direct text/html raw rendering)
+        try:
+            print("  [+] Publishing HTML dashboard to dpaste.com for direct browser rendering...")
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            payload = {
+                "content": content,
+                "syntax": "html",
+                "expiry_days": 30,
+            }
+            resp = requests.post("https://dpaste.com/api/v2/", data=payload, timeout=20)
+            if resp.status_code == 201 and resp.text.strip().startswith("http"):
+                raw_url = f"{resp.text.strip()}.raw"
+                print(f"  [✓] Interactive HTML dashboard live at: {raw_url}")
+                return raw_url
+        except Exception as e:
+            print(f"  [!] dpaste publishing notice: {e}")
+
+        # Provider 2: Fallback to Catbox.moe
+        try:
+            print("  [+] Fallback uploading to Catbox.moe...")
+            with open(file_path, "rb") as f:
+                filename = f"watchdog_{file_path.stem}.html"
+                files = {"fileToUpload": (filename, f, "text/html; charset=utf-8")}
+                data = {"reqtype": "fileupload"}
+                resp = requests.post("https://catbox.moe/user/api.php", data=data, files=files, timeout=20)
+                if resp.status_code == 200 and resp.text.strip().startswith("http"):
+                    return resp.text.strip()
+        except Exception as e:
+            print(f"  [!] Fallback upload notice: {e}")
+
+        return None
+
+    def publish_to_telegraph(self, brief: ExecutiveBrief) -> Optional[str]:
+        """
+        Publishes the executive brief to Telegraph API (telegra.ph) for native
+        Instant View in Telegram and a clean, responsive article view on any browser.
+        """
+        try:
+            print("  [+] Creating Telegraph Instant View article page...")
+            acc_res = requests.get(
+                "https://api.telegra.ph/createAccount?short_name=Watchdog&author_name=AI_Watchdog",
+                timeout=10,
+            ).json()
+            token = acc_res.get("result", {}).get("access_token")
+            if not token:
+                return None
+
+            nodes = [
+                {"tag": "p", "children": [f"📅 توقيت التقرير: {brief.timestamp} | تم فحص {brief.total_scanned} مقالاً إخبارياً"]},
+                {"tag": "hr"},
+                {"tag": "h3", "children": ["🤖 قطاع التقنية والذكاء الاصطناعي (Tech & AI Highlights)"]},
+                {"tag": "blockquote", "children": [brief.tech_ai_summary_ar]},
+            ]
+
+            for i, item in enumerate(brief.tech_ai_highlights, 1):
+                title_ar = item.title_ar or item.title
+                takeaway_ar = item.key_takeaway_ar or item.key_takeaway
+                tags_str = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
+                nodes.append({
+                    "tag": "h4",
+                    "children": [f"{i}. ", {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]}],
+                })
+                nodes.append({
+                    "tag": "p",
+                    "children": [
+                        {"tag": "b", "children": ["🎯 التقييم: "]}, f"{item.score}/100 | {tags_str}",
+                        {"tag": "br"},
+                        {"tag": "b", "children": ["💡 الملخص: "]}, takeaway_ar,
+                        {"tag": "br"},
+                        {"tag": "b", "children": ["📰 المصدر: "]}, item.source,
+                    ],
+                })
+
+            nodes.append({"tag": "hr"})
+            nodes.append({"tag": "h3", "children": ["⚽ قطاع الرياضة ونادي برشلونة (Sports & FC Barcelona Highlights)"]})
+            nodes.append({"tag": "blockquote", "children": [brief.sports_summary_ar]})
+
+            for i, item in enumerate(brief.sports_highlights, 1):
+                title_ar = item.title_ar or item.title
+                takeaway_ar = item.key_takeaway_ar or item.key_takeaway
+                tags_str = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
+                nodes.append({
+                    "tag": "h4",
+                    "children": [f"{i}. ", {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]}],
+                })
+                nodes.append({
+                    "tag": "p",
+                    "children": [
+                        {"tag": "b", "children": ["🔥 الأهمية: "]}, f"{item.score}/100 | {tags_str}",
+                        {"tag": "br"},
+                        {"tag": "b", "children": ["📌 الملخص: "]}, takeaway_ar,
+                        {"tag": "br"},
+                        {"tag": "b", "children": ["🏟️ المصدر: "]}, item.source,
+                    ],
+                })
+
+            res = requests.post(
+                "https://api.telegra.ph/createPage",
+                json={
+                    "access_token": token,
+                    "title": "لوحة الرصد والذكاء الإخباري الشامل",
+                    "author_name": "AI & Sports Autonomous Watchdog",
+                    "content": nodes,
+                    "return_content": False,
+                },
+                timeout=15,
+            ).json()
+
+            if res.get("ok"):
+                page_url = res["result"]["url"]
+                print(f"  [✓] Telegraph Instant View article live at: {page_url}")
+                return page_url
+        except Exception as e:
+            print(f"  [!] Telegraph publishing notice: {e}")
+
+        return None
+
+    def publish_to_github_pages(
+        self, file_path: Path, repo: str = "maysaraisaa1/Telegram-News-Watchdog"
+    ) -> Optional[str]:
+        """
+        Commits index.html directly to GitHub repository via REST API if GITHUB_TOKEN is present,
+        deploying the official permanent GitHub Pages link: https://maysaraisaa1.github.io/Telegram-News-Watchdog/
+        """
+        import os
+        token = os.getenv("GITHUB_TOKEN", "").strip()
+        if not token:
+            return None
+        try:
+            import base64
+            with open(file_path, "rb") as f:
+                content_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+            api_url = f"https://api.github.com/repos/{repo}/contents/index.html"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+            sha = None
+            get_res = requests.get(api_url, headers=headers, timeout=10)
+            if get_res.status_code == 200:
+                sha = get_res.json().get("sha")
+
+            payload = {"message": "Update autonomous watchdog dashboard", "content": content_b64}
+            if sha:
+                payload["sha"] = sha
+
+            put_res = requests.put(api_url, headers=headers, json=payload, timeout=15)
+            if put_res.status_code in (200, 201):
+                url = f"https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/"
+                print(f"  [✓] Published directly to GitHub Pages: {url}")
+                return url
+        except Exception as e:
+            print(f"  [!] GitHub Pages auto-publish notice: {e}")
+        return None
+
+    # =========================================================================
     # 1. Telegram Bot Delivery
     # =========================================================================
-    def send_telegram_alert(self, brief: ExecutiveBrief) -> bool:
-        """Sends the formatted executive brief to Telegram if configured."""
+    def send_telegram_alert(
+        self, brief: ExecutiveBrief, dashboard_path: Optional[Path] = None
+    ) -> bool:
+        """Sends the formatted executive brief to Telegram with live rendered dashboard & Telegraph links."""
         token = config.TELEGRAM_BOT_TOKEN
         chat_id = config.TELEGRAM_CHAT_ID
 
@@ -33,42 +205,88 @@ class ReportNotifier:
             print("  [i] Telegram Bot Token/Chat ID not set. Skipping Telegram notification.")
             return False
 
-        message_chunks = self._format_telegram_messages(brief)
+        # 1. Publish directly-rendered HTML dashboard (GitHub Pages or dpaste.com)
+        dashboard_web_url = None
+        if dashboard_path and dashboard_path.exists():
+            # Check GitHub Pages first if configured
+            dashboard_web_url = self.publish_to_github_pages(dashboard_path)
+            if not dashboard_web_url:
+                dashboard_web_url = self.publish_html_dashboard(dashboard_path)
+
+            # Also keep index.html synced locally for GitHub Pages
+            try:
+                index_root = Path(__file__).resolve().parent.parent / "index.html"
+                shutil.copyfile(dashboard_path, index_root)
+            except Exception:
+                pass
+
+        # 2. Publish native Telegraph article for Instant View
+        telegraph_url = self.publish_to_telegraph(brief)
+
+        message_chunks = self._format_telegram_messages(
+            brief, dashboard_url=dashboard_web_url, telegraph_url=telegraph_url
+        )
         url = f"https://api.telegram.org/bot{token}/sendMessage"
 
+        session = requests.Session()
         success_all = True
         for idx, chunk in enumerate(message_chunks, start=1):
             payload = {
                 "chat_id": chat_id,
                 "text": chunk,
                 "parse_mode": "HTML",
-                "disable_web_page_preview": True,
+                "disable_web_page_preview": False,
             }
-            try:
-                resp = requests.post(url, json=payload, timeout=15)
-                if resp.status_code == 200:
-                    print(f"  [✓] Telegram message part {idx}/{len(message_chunks)} sent successfully.")
-                else:
-                    print(f"  [X] Telegram API error ({resp.status_code}): {resp.text}")
-                    # Try fallback without HTML parse mode if entity parsing failed
-                    fallback_payload = {
-                        "chat_id": chat_id,
-                        "text": chunk.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("<code>", "").replace("</code>", ""),
-                        "disable_web_page_preview": True,
-                    }
-                    fb_resp = requests.post(url, json=fallback_payload, timeout=15)
-                    if fb_resp.status_code == 200:
-                        print(f"  [✓] Telegram message part {idx} sent successfully via fallback mode.")
+
+            # Attach interactive buttons to the final message part
+            if idx == len(message_chunks):
+                buttons = []
+                if telegraph_url:
+                    buttons.append([{"text": "⚡ قراءة المقال الفوري (Instant View) ↗", "url": telegraph_url}])
+                if dashboard_web_url:
+                    buttons.append([{"text": "🌐 فتح لوحة التحكم التفاعلية ↗", "url": dashboard_web_url}])
+
+                if buttons:
+                    payload["reply_markup"] = {"inline_keyboard": buttons}
+
+            sent = False
+            for attempt in range(1, 4):
+                try:
+                    resp = session.post(url, json=payload, timeout=20)
+                    if resp.status_code == 200:
+                        print(f"  [✓] Telegram message part {idx}/{len(message_chunks)} sent successfully.")
+                        sent = True
+                        break
                     else:
-                        success_all = False
-            except requests.RequestException as e:
-                print(f"  [X] Failed to connect to Telegram API: {e}")
+                        print(f"  [X] Telegram API error ({resp.status_code}): {resp.text}")
+                        # Fallback without HTML parse mode if entity parsing failed
+                        fallback_payload = {
+                            "chat_id": chat_id,
+                            "text": chunk.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("<code>", "").replace("</code>", ""),
+                            "disable_web_page_preview": True,
+                        }
+                        fb_resp = session.post(url, json=fallback_payload, timeout=20)
+                        if fb_resp.status_code == 200:
+                            print(f"  [✓] Telegram message part {idx} sent successfully via fallback mode.")
+                            sent = True
+                            break
+                except requests.RequestException as e:
+                    print(f"  [!] Telegram network retry {attempt}/3 for part {idx}: {e}")
+                    import time
+                    time.sleep(1.5)
+
+            if not sent:
                 success_all = False
 
         return success_all
 
-    def _format_telegram_messages(self, brief: ExecutiveBrief) -> List[str]:
-        """Formats brief into clean, structured Arabic Telegram message chunks."""
+    def _format_telegram_messages(
+        self,
+        brief: ExecutiveBrief,
+        dashboard_url: Optional[str] = None,
+        telegraph_url: Optional[str] = None,
+    ) -> List[str]:
+        """Formats brief into clean, structured Arabic Telegram message chunks with direct web links."""
         chunks: List[str] = []
 
         # ==================== Section 1: Tech & AI ====================
@@ -115,6 +333,20 @@ class ReportNotifier:
                 f"📌 <b>الملخص:</b> {takeaway}\n"
                 f"🏟️ <b>المصدر ({html.escape(item.source)}):</b> <a href='{item.link}'>اضغط لقراءة الخبر كاملاً ↗</a>\n"
             )
+
+        # Append Public Interactive Dashboard Link and Telegraph Link
+        links_footer = []
+        if dashboard_url:
+            links_footer.append(
+                f"🌐 <b>رابط تصفح لوحة التحكم التفاعلية مباشرة:</b> <a href='{dashboard_url}'>[اضغط هنا]</a>"
+            )
+        if telegraph_url:
+            links_footer.append(
+                f"⚡ <b>أو قراءة التقرير عبر Instant View الفوري:</b> <a href='{telegraph_url}'>[عرض المقال في تيليجرام]</a>"
+            )
+
+        if links_footer:
+            sports_lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━\n" + "\n".join(links_footer) + "\n")
 
         chunks.append("\n".join(sports_lines))
 

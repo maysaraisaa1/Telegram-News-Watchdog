@@ -165,10 +165,10 @@ def run_pipeline(
     else:
         print("      [Dry Run] Skipped writing to SQLite database.")
 
-    # Dispatch alerts
+    # Generate HTML Dashboard & Dispatch Alerts
     notifier = ReportNotifier()
-    notifier.send_telegram_alert(brief)
     dashboard_path = notifier.generate_html_dashboard(brief, auto_open=auto_open)
+    notifier.send_telegram_alert(brief, dashboard_path=dashboard_path)
 
     elapsed = round(time.time() - start_time, 2)
     print(f"\n{Fore.GREEN}{Style.BRIGHT}========================================================================")
