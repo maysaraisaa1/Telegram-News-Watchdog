@@ -1,12 +1,17 @@
-name: Telegram News Watchdog
+name: Telegram News Watchdog & Dashboard
 
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
-  run-watchdog:
+  run-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -29,3 +34,17 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python main.py --no-browser
+          mkdir -p public
+          cp reports/latest.html public/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
