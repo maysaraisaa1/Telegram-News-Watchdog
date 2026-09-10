@@ -17,56 +17,16 @@ from processor import ExecutiveBrief, ProcessedNewsItem
 class ReportNotifier:
     """Dispatches executive briefings via Telegram and generates sleek Arabic local HTML dashboards."""
 
+    # الرابط الدائم الرسمي للوحة التحكم على GitHub Pages
+    GITHUB_PAGES_URL = "https://maysaraisaa1.github.io/Telegram-News-Watchdog/"
+
     def __init__(self, reports_dir: Optional[Path] = None) -> None:
         self.reports_dir = reports_dir or config.REPORTS_DIR
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
     # =========================================================================
-    # 0. Public HTML Report & Telegraph Publishing Engines
+    # 0. Telegraph Publishing Engine (Native Instant View)
     # =========================================================================
-    def publish_html_dashboard(self, file_path: Path) -> Optional[str]:
-        """
-        Uploads the HTML dashboard to a direct-serving service (dpaste.com .raw)
-        which serves with 'Content-Type: text/html; charset=UTF-8' so browsers
-        render the full interactive graphic dashboard directly instead of raw code.
-        """
-        if not file_path or not file_path.exists():
-            return None
-
-        # Provider 1: dpaste.com (Direct text/html raw rendering)
-        try:
-            print("  [+] Publishing HTML dashboard to dpaste.com for direct browser rendering...")
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            payload = {
-                "content": content,
-                "syntax": "html",
-                "expiry_days": 30,
-            }
-            resp = requests.post("https://dpaste.com/api/v2/", data=payload, timeout=20)
-            if resp.status_code == 201 and resp.text.strip().startswith("http"):
-                raw_url = f"{resp.text.strip()}.raw"
-                print(f"  [✓] Interactive HTML dashboard live at: {raw_url}")
-                return raw_url
-        except Exception as e:
-            print(f"  [!] dpaste publishing notice: {e}")
-
-        # Provider 2: Fallback to Catbox.moe
-        try:
-            print("  [+] Fallback uploading to Catbox.moe...")
-            with open(file_path, "rb") as f:
-                filename = f"watchdog_{file_path.stem}.html"
-                files = {"fileToUpload": (filename, f, "text/html; charset=utf-8")}
-                data = {"reqtype": "fileupload"}
-                resp = requests.post("https://catbox.moe/user/api.php", data=data, files=files, timeout=20)
-                if resp.status_code == 200 and resp.text.strip().startswith("http"):
-                    return resp.text.strip()
-        except Exception as e:
-            print(f"  [!] Fallback upload notice: {e}")
-
-        return None
-
     def publish_to_telegraph(self, brief: ExecutiveBrief) -> Optional[str]:
         """
         Publishes the executive brief to Telegraph API (telegra.ph) for native
@@ -146,52 +106,13 @@ class ReportNotifier:
 
         return None
 
-    def publish_to_github_pages(
-        self, file_path: Path, repo: str = "maysaraisaa1/Telegram-News-Watchdog"
-    ) -> Optional[str]:
-        """
-        Commits index.html directly to GitHub repository via REST API if GITHUB_TOKEN is present,
-        deploying the official permanent GitHub Pages link: https://maysaraisaa1.github.io/Telegram-News-Watchdog/
-        """
-        import os
-        token = os.getenv("GITHUB_TOKEN", "").strip()
-        if not token:
-            return None
-        try:
-            import base64
-            with open(file_path, "rb") as f:
-                content_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-            api_url = f"https://api.github.com/repos/{repo}/contents/index.html"
-            headers = {
-                "Authorization": f"token {token}",
-                "Accept": "application/vnd.github.v3+json",
-            }
-            sha = None
-            get_res = requests.get(api_url, headers=headers, timeout=10)
-            if get_res.status_code == 200:
-                sha = get_res.json().get("sha")
-
-            payload = {"message": "Update autonomous watchdog dashboard", "content": content_b64}
-            if sha:
-                payload["sha"] = sha
-
-            put_res = requests.put(api_url, headers=headers, json=payload, timeout=15)
-            if put_res.status_code in (200, 201):
-                url = f"https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/"
-                print(f"  [✓] Published directly to GitHub Pages: {url}")
-                return url
-        except Exception as e:
-            print(f"  [!] GitHub Pages auto-publish notice: {e}")
-        return None
-
     # =========================================================================
     # 1. Telegram Bot Delivery
     # =========================================================================
     def send_telegram_alert(
         self, brief: ExecutiveBrief, dashboard_path: Optional[Path] = None
     ) -> bool:
-        """Sends the formatted executive brief to Telegram with live rendered dashboard & Telegraph links."""
+        """Sends the formatted executive brief to Telegram with GitHub Pages & Telegraph links."""
         token = config.TELEGRAM_BOT_TOKEN
         chat_id = config.TELEGRAM_CHAT_ID
 
@@ -199,22 +120,18 @@ class ReportNotifier:
             print("  [i] Telegram Bot Token/Chat ID not set. Skipping Telegram notification.")
             return False
 
-        # 1. Publish directly-rendered HTML dashboard (GitHub Pages or dpaste.com)
-        dashboard_web_url = None
-        if dashboard_path and dashboard_path.exists():
-            # Check GitHub Pages first if configured
-            dashboard_web_url = self.publish_to_github_pages(dashboard_path)
-            if not dashboard_web_url:
-                dashboard_web_url = self.publish_html_dashboard(dashboard_path)
+        # 1. استخدام رابط GitHub Pages الدائم والمباشر
+        dashboard_web_url = self.GITHUB_PAGES_URL
 
-            # Also keep index.html synced locally for GitHub Pages
+        # مزامنة index.html محلياً عند توفره
+        if dashboard_path and dashboard_path.exists():
             try:
                 index_root = Path(__file__).resolve().parent.parent / "index.html"
                 shutil.copyfile(dashboard_path, index_root)
             except Exception:
                 pass
 
-        # 2. Publish native Telegraph article for Instant View
+        # 2. نشر مقال Telegraph الفوري
         telegraph_url = self.publish_to_telegraph(brief)
 
         message_chunks = self._format_telegram_messages(
@@ -233,7 +150,7 @@ class ReportNotifier:
                 "link_preview_options": {"is_disabled": True},
             }
 
-            # Attach interactive buttons to the final message part
+            # إرفاق الأزرار التفاعلية بالقسم الأخير
             if idx == len(message_chunks):
                 buttons = []
                 if telegraph_url:
@@ -254,7 +171,7 @@ class ReportNotifier:
                         break
                     else:
                         print(f"  [X] Telegram API error ({resp.status_code}): {resp.text}")
-                        # Fallback without HTML parse mode if entity parsing failed
+                        # نمط احتياطي دون وسوم HTML
                         fallback_payload = {
                             "chat_id": chat_id,
                             "text": (
@@ -333,7 +250,7 @@ class ReportNotifier:
                 f"📰 <b>المصدر:</b> {source} • 🔗 <a href='{item.link}'>تفاصيل الخبر ↗</a>\n"
             )
 
-        # Clean, minimal footer links
+        # تذييل الرابط الدائم
         links_footer = []
         if dashboard_url:
             links_footer.append(
