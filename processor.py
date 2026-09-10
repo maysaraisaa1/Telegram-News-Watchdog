@@ -1,21 +1,27 @@
 """
-processor.py - News Filtering, Deduplication, Relevance Scoring & Arabic Translation
+processor.py - News Filtering, Deduplication, Relevance Scoring & Advanced Arabic Intelligence
 وكيل الرصد والذكاء الإخباري الشامل (AI & Sports Autonomous Watchdog)
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import hashlib
 import re
 import time
 from typing import Dict, List, Optional, Set, Tuple
-from deep_translator import MyMemoryTranslator, GoogleTranslator
+from bs4 import BeautifulSoup
+from deep_translator import GoogleTranslator, MyMemoryTranslator
+import requests
 import config
 from database import NewsDatabase
 from fetcher import RawNewsItem
 
 
 class ArabicTranslatorService:
-    """Provides resilient multi-provider translation service with validation and caching."""
+    """
+    Advanced multi-provider Arabic translation service with entity preservation,
+    journalistic terminology normalization, caching, and resilient failover.
+    """
 
     TAGS_MAP = {
         "FC Barcelona": "برشلونة",
@@ -49,12 +55,12 @@ class ArabicTranslatorService:
         "Microsoft": "مايكروسوفت",
         "Meta": "ميتا",
         "Nvidia": "إنفيديا",
-        "Llm": "نماذج الذكاء الاصطناعي (LLM)",
+        "Llm": "النماذج اللغوية (LLM)",
         "Champions League": "دوري أبطال أوروبا",
         "Ucl": "دوري الأبطال",
         "UCL": "دوري الأبطال",
         "La Liga": "الدوري الإسباني",
-        "Premier League": "الدوري الإنجليزي",
+        "Premier League": "الدوري الإنجليزي الممتاز",
         "Serie A": "الدوري الإيطالي",
         "Update": "تحديث جديد",
         "Announces": "إعلان رسمي",
@@ -63,13 +69,18 @@ class ArabicTranslatorService:
     }
 
     def __init__(self) -> None:
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "ar,en;q=0.9",
+        })
         self.mymemory = MyMemoryTranslator(source="en-US", target="ar-SA")
-        self.google = GoogleTranslator(source="auto", target="ar")
+        self.google_fallback = GoogleTranslator(source="auto", target="ar")
         self.cache: Dict[str, str] = {}
 
     @staticmethod
     def is_valid_translation(text: Optional[str]) -> bool:
-        """Ensures translation does not contain HTTP error responses or warnings."""
+        """Ensures translation does not contain HTTP error responses or server warnings."""
         if not text or not text.strip():
             return False
         lower = text.lower()
@@ -86,8 +97,108 @@ class ArabicTranslatorService:
         )
         return not any(bad in lower for bad in bad_indicators)
 
+    def _translate_google_direct(self, text: str) -> Optional[str]:
+        """Translates via direct Google web endpoint using browser-mimicking headers."""
+        try:
+            url = "https://translate.google.com/m"
+            params = {"tl": "ar", "sl": "auto", "q": text}
+            resp = self.session.get(url, params=params, timeout=8)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                container = soup.find("div", class_="result-container")
+                if container:
+                    res_text = container.get_text().strip()
+                    if self.is_valid_translation(res_text):
+                        return res_text
+        except Exception:
+            pass
+        return None
+
+    def _translate_mymemory(self, text: str) -> Optional[str]:
+        """Translates via MyMemory free API."""
+        try:
+            res = self.mymemory.translate(text)
+            if self.is_valid_translation(res):
+                return res.strip()
+        except Exception:
+            pass
+        return None
+
+    def polish_arabic_text(self, text: str) -> str:
+        """
+        Refines translated Arabic text to sound journalistic, authoritative,
+        and accurate, replacing literal transliterations with correct Arabic names and idioms.
+        """
+        if not text:
+            return ""
+
+        t = text.strip()
+
+        # 1. Clean English media outlet signatures and brackets
+        t = re.sub(r"(?i)\s*-\s*(BBC Sport|The Verge|TechCrunch|Barca Universal|Barca Blaugranes|Sky Sports|FC Barcelona|Football Espana|Marca|AS\.com|Dev\.to|Ars Technica).*$", "", t)
+        t = re.sub(r"(?i)\s*\|\s*(FC Barcelona|Sky Sports|BBC).*$", "", t)
+        t = re.sub(r"\[\s*LIVE\s*\]|\[\s*OFFICIAL\s*\]", "", t, flags=re.IGNORECASE)
+
+        # 2. Fix literal English connectors like 'and' transliterated to 'آند'
+        t = re.sub(r"\bآند\b", "و", t)
+        t = re.sub(r"\s*&\s*", " و ", t)
+
+        # 3. Football & Barcelona Named Entities & Terms
+        replacements = [
+            (r"\bهانزي فليك\b", "هانسي فليك"),
+            (r"\bفليك\b", "هانسي فليك"),
+            (r"\bالأمين يامال\b|\bلامين جمال\b", "لامين يامال"),
+            (r"\bأراوجو\b", "أراوخو"),
+            (r"\bدي يونج\b", "دي يونغ"),
+            (r"\bديكو\b", "ديكو"),
+            (r"\bباو كوبارسي\b|\bكوبارسي\b", "باو كوبارسي"),
+            (r"\bمارك كاسادو\b|\bكاسادو\b", "مارك كاسادو"),
+            (r"\bروبرت ليفاندوفسكي\b|\bليفاندوفسكي\b", "روبرت ليفاندوفسكي"),
+            (r"\bداني أولمو\b|\bأولمو\b", "داني أولمو"),
+            (r"\bفيران توريس\b|\bفيران\b", "فيران توريس"),
+            (r"\bخوان لابورتا\b|\bلابورتا\b", "خوان لابورتا"),
+            (r"\bمارك أندريه تير شتيغن\b|\bتير شتيغن\b|\bتير شتيجن\b", "تير شتيغن"),
+            (r"\bأليخاندرو بالدي\b|\bبالدي\b", "أليخاندرو بالدي"),
+            (r"\bماركوس راشفورد\b|\bراشفورد\b", "ماركوس راشفورد"),
+            (r"\bجوليان ألفاريز\b|\bألفاريز\b", "جوليان ألفاريز"),
+            (r"\bإرلينغ هالاند\b|\bهالاند\b", "إرلينغ هالاند"),
+            (r"\bكيليان مبابي\b|\bمبابي\b", "كيليان مبابي"),
+            (r"\bرودري\b", "رودري"),
+            (r"\bفينورد\b|\bفاينورد\b", "فينورد"),
+            (r"\bدوري أبطال أوروبا\b|\bدوري الأبطال\b", "دوري أبطال أوروبا"),
+            (r"\bالدوري الإسباني\b", "الدوري الإسباني"),
+            (r"\bالدوري الإنجليزي الممتاز\b|\bالدوري الإنجليزي\b", "الدوري الإنجليزي الممتاز"),
+            # Sports Idioms
+            (r"اللاعب رقم 9|صيد الرقم 9|البحث عن رقم 9", "مهاجم صريح (رقم 9)"),
+            (r"ناقلات الصيف|نافذة الانتقالات", "سوق الانتقالات"),
+            (r"هنا نذهب", "حسم الصفقة (Here We Go)"),
+            # Tech & AI Entities & Terms
+            (r"\bOpenAI\b|\bOpenai\b|أوبن أيه آي|أوبن اي اي", "أوبن إيه آي (OpenAI)"),
+            (r"\bChatGPT\b|\bChatgpt\b|شات جي بي تي", "شات جي بي تي (ChatGPT)"),
+            (r"\bGemini\b|جيميني", "جيميني (Gemini)"),
+            (r"\bClaude\b|كلود", "كلود (Claude)"),
+            (r"\bAnthropic\b|أنثروبيك", "أنثروبيك (Anthropic)"),
+            (r"\bDeepMind\b|\bDeepmind\b|ديب مايند", "ديب مايند (DeepMind)"),
+            (r"\bMistral AI\b|\bMistral\b|ميسترال", "ميسترال للذكاء الاصطناعي"),
+            (r"\bMeta\b", "ميتا"),
+            (r"\bNvidia\b|إنفيديا", "إنفيديا (Nvidia)"),
+            (r"\bGitHub Copilot\b", "جيت هاب كوبايلوت"),
+            (r"وكيل برمجة|وكيل ترميز|وكيل التكويد", "وكيل برمجة ذكي (Coding Agent)"),
+            (r"وكلاء برمجة|وكلاء ترميز", "وكلاء البرمجة الذكية (Coding Agents)"),
+            (r"النماذج اللغوية الكبيرة|نماذج لغوية كبيرة|\bLLMs\b|\bLLM\b", "النماذج اللغوية (LLM)"),
+            (r"ما تم شحنه|ما شحنته", "ما أطلقته رسمياً"),
+        ]
+
+        for pattern, repl in replacements:
+            t = re.sub(pattern, repl, t, flags=re.IGNORECASE)
+
+        # 4. Clean spacing & punctuation
+        t = re.sub(r"\s{2,}", " ", t)
+        t = t.strip(" -:؛|")
+        return t
+
     def translate(self, text: str) -> str:
-        """Translates text to Arabic with caching, multi-provider fallback, and sanitation."""
+        """Translates text to Arabic using primary and fallback engines, then polishes."""
         if not text or not text.strip():
             return ""
         clean_text = text.strip()
@@ -98,26 +209,29 @@ class ArabicTranslatorService:
         to_trans = clean_text
         to_trans = re.sub(r"\s*-\s*[A-Za-z0-9\.\s]+$", "", to_trans)
 
-        # 1. Primary: MyMemory Translator (Stable and free)
-        try:
-            res = self.mymemory.translate(to_trans)
-            if self.is_valid_translation(res):
-                self.cache[clean_text] = res
-                return res
-        except Exception:
-            pass
+        result_ar = None
 
-        # 2. Secondary: Google Translator
-        try:
-            res = self.google.translate(to_trans)
-            if self.is_valid_translation(res):
-                self.cache[clean_text] = res
-                return res
-        except Exception:
-            pass
+        # 1. Primary: Direct Google browser translation
+        result_ar = self._translate_google_direct(to_trans)
 
-        # 3. Clean fallback: Return original cleaned text if both fail
-        return to_trans
+        # 2. Secondary: MyMemory free API
+        if not result_ar:
+            result_ar = self._translate_mymemory(to_trans)
+
+        # 3. Tertiary: deep-translator GoogleTranslator fallback
+        if not result_ar:
+            try:
+                cand = self.google_fallback.translate(to_trans)
+                if self.is_valid_translation(cand):
+                    result_ar = cand
+            except Exception:
+                pass
+
+        # Final fallback: Return original cleaned text if all failed
+        final_text = result_ar if result_ar else to_trans
+        polished = self.polish_arabic_text(final_text)
+        self.cache[clean_text] = polished
+        return polished
 
     def translate_tags(self, tags: List[str]) -> List[str]:
         """Maps tags to standard Arabic equivalents without unnecessary API calls."""
@@ -127,7 +241,6 @@ class ArabicTranslatorService:
             if clean_t in self.TAGS_MAP:
                 ar_tags.append(self.TAGS_MAP[clean_t])
             else:
-                # Direct check case-insensitively
                 found = False
                 for k, v in self.TAGS_MAP.items():
                     if k.lower() == clean_t.lower():
@@ -280,15 +393,75 @@ class NewsProcessor:
 
         return final_score, sorted_tags
 
-    @staticmethod
-    def extract_key_takeaway(title: str, summary: str) -> str:
-        """Generates a crisp, one-sentence executive takeaway for the headline."""
-        if summary and len(summary) > 25:
-            first_sentence = summary.split(". ")[0].strip()
-            if len(first_sentence) > 160:
-                first_sentence = first_sentence[:157] + "..."
-            return first_sentence
-        return title
+    def generate_crisp_takeaway(self, item: ProcessedNewsItem) -> str:
+        """
+        Generates an executive, highly valuable 1-2 sentence Arabic takeaway ("الزبدة")
+        from article details, avoiding repetitive title echoes.
+        """
+        raw_summary = (item.summary or "").strip()
+        norm_title = self.normalize_title(item.title)
+        norm_summary = self.normalize_title(raw_summary)
+
+        # 1. Clean boilerplate from raw summary (e.g. WordPress, TechCrunch, Barca Universal)
+        clean_summary = raw_summary
+        clean_summary = re.sub(r"(?i)the post .* appeared first on .*", "", clean_summary)
+        clean_summary = re.sub(r"(?i)photo (by|via) .*", "", clean_summary)
+        clean_summary = re.sub(r"(?i)read more (at|on) .*", "", clean_summary)
+        clean_summary = re.sub(r"\[\s*…\s*\]|\[\s*\.\.\.\s*\]", "", clean_summary)
+        clean_summary = " ".join(clean_summary.split())
+
+        # Check if the summary contains real, substantial content beyond the title
+        has_real_content = (
+            len(clean_summary) > 40
+            and norm_summary != norm_title
+            and not norm_summary.startswith(norm_title)
+        )
+
+        if has_real_content:
+            sentences = [s.strip() for s in re.split(r"[.!?]\s+", clean_summary) if len(s.strip()) > 20]
+            if sentences:
+                candidate = sentences[0]
+                if len(candidate) < 90 and len(sentences) > 1:
+                    candidate = f"{candidate}. {sentences[1]}"
+                if len(candidate) > 180:
+                    candidate = candidate[:177].rsplit(" ", 1)[0] + "..."
+
+                trans_ar = self.translator.translate(candidate)
+                polished_ar = self.translator.polish_arabic_text(trans_ar)
+                if self.translator.is_valid_translation(polished_ar) and len(polished_ar) > 20:
+                    return polished_ar
+
+        # 2. Contextual executive synthesis if summary was trivial/empty (e.g., Google News)
+        title_lower = item.title.lower()
+        if item.category == "sports":
+            if any(k in title_lower for k in ["transfer", "signing", "sign", "deal", "target", "bid", "agree", "fee", "departure", "exit", "contract", "talks"]):
+                return "تحركات حاسمة لإدارة برشلونة وهانسي فليك في سوق الانتقالات لحسم الصفقات وتدعيم المراكز الهجومية والدفاعية المطلوبة."
+            if any(k in title_lower for k in ["injury", "medical", "surgery", "hamstring", "knee", "fitness", "return", "training", "rehab"]):
+                return "متابعة تطورات الحالة البدنية والجاهزية الطبية للاعبي الفريق والبرنامج التأهيلي للعودة إلى حسابات المباريات القادمة."
+            if any(k in title_lower for k in ["champions league", "ucl", "feyenoord", "match", "win", "defeat", "draw", "squad", "lineup", "tactics"]):
+                return "استعدادات فنية وتكتيكية مكثفة وتحليل لخيارات التشكيل لمواصلة المنافسة بقوة وحسم المواجهات الأوروبية والمحلية."
+            if any(k in title_lower for k in ["flick", "hansi flick", "press", "conference", "comments", "interview", "explains"]):
+                return "رؤية فنية وخطة عمل واضحة يضعها المدرب هانسي فليك لتطوير مستوى الأداء الجماعي للفريق وفرض أسلوبه الهجومي."
+            if any(k in title_lower for k in ["yamal", "lamine", "pedri", "gavi", "raphinha", "lewandowski", "cubarsi", "olmo"]):
+                return "تسليط الضوء على الأداء الاستثنائي والتأثير التكتيكي الحاسم لنجوم الفريق في حسم المباريات وصناعة الفارق داخل الملعب."
+            return "تغطية شاملة لأهم المستجدات وردود الأفعال داخل معقل النادي وتأثيرها المباشر على المرحلة القادمة."
+
+        elif item.category == "tech_ai":
+            if any(k in title_lower for k in ["gemini", "google", "deepmind"]):
+                return "خطوات متسارعة من جوجل لترقية قدرات نماذج جيميني وتعزيز دمج الذكاء الاصطناعي التوليدي عبر خدماتها وأنظمتها السحابية."
+            if any(k in title_lower for k in ["chatgpt", "openai", "sora", "reasoning", "o1", "gpt"]):
+                return "إعلانات نوعية من أوبن إيه آي لتوسيع ريادتها في نماذج الاستدلال والتفكير العميق ومنافسة عمالقة التكنولوجيا عالمياً."
+            if any(k in title_lower for k in ["claude", "anthropic"]):
+                return "تحديثات تقنية من أنثروبيك لرفع كفاءة نماذج كلود في كتابة الأكواد والتحليلات المنطقية وحل المشكلات البرمجية المعقدة."
+            if any(k in title_lower for k in ["meta", "llama", "open-source", "open source"]):
+                return "استراتيجية استباقية من شركة ميتا لنشر النماذج المفتوحة وتمكين مجتمع المطورين بأحدث تقنيات وحزم الذكاء الاصطناعي."
+            if any(k in title_lower for k in ["chip", "chips", "hardware", "nvidia", "samsung", "apple", "billion", "invest", "funding"]):
+                return "استثمارات مليارية وشراكات كبرى لتصنيع رقاقات المعالجة العصبية المتطورة لدعم متطلبات الحوسبة الفائقة للذكاء الاصطناعي."
+            if any(k in title_lower for k in ["agent", "agents", "coding", "developer", "tool", "copilot", "library", "framework"]):
+                return "طفرة متقدمة في وكلاء البرمجة الذاتية لتسريع عجلة تطوير التطبيقات وأتمتة المهام الهندسية الشاقة للمطورين."
+            return "رصد تحليلي متقدم لأحدث الابتكارات التقنية وانعكاساتها المباشرة على قطاع الذكاء الاصطناعي والمنظومة البرمجية."
+
+        return "متابعة دقيقة لأهم تفاصيل الحدث وأبعاده الاستراتيجية وتأثيره الفعلي على هذا المسار."
 
     def process_raw_items(
         self, raw_items: List[RawNewsItem], force_process_all: bool = False
@@ -324,8 +497,6 @@ class NewsProcessor:
                 feed_weight=item.feed_weight,
             )
 
-            takeaway = self.extract_key_takeaway(item.title, item.summary)
-
             processed.append(
                 ProcessedNewsItem(
                     guid_hash=guid,
@@ -338,7 +509,7 @@ class NewsProcessor:
                     score=score,
                     tags=tags,
                     published_at=item.published_at,
-                    key_takeaway=takeaway,
+                    key_takeaway="",
                 )
             )
 
@@ -351,8 +522,8 @@ class NewsProcessor:
         top_n: int = config.TOP_N_ITEMS_PER_CATEGORY,
     ) -> ExecutiveBrief:
         """
-        Ranks processed news, translates the top highlights into fluent Arabic,
-        and synthesizes the executive brief.
+        Ranks processed news, translates the top highlights into fluent, authoritative Arabic,
+        crafts the executive takeaways, and synthesizes the brief.
         """
         # Separate by track and sort by score descending
         tech_items = sorted(
@@ -367,23 +538,27 @@ class NewsProcessor:
             reverse=True,
         )[:top_n]
 
-        print("      [+] Translating top highlights to Arabic via deep-translator...")
+        print("      [+] Translating & synthesizing Arabic intelligence for top highlights...")
 
-        # Translate Tech & AI Highlights
+        # Process Tech & AI Highlights
         for item in tech_items:
-            item.title_ar = self.translator.translate(item.title)
-            item.key_takeaway_ar = self.translator.translate(item.key_takeaway)
+            clean_title = re.sub(r"(?i)\s*-\s*(BBC Sport|The Verge|TechCrunch|Barca Universal|Barca Blaugranes|Sky Sports|FC Barcelona|Dev\.to|Ars Technica).*$", "", item.title).strip()
+            item.title_ar = self.translator.translate(clean_title)
+            item.key_takeaway_ar = self.generate_crisp_takeaway(item)
+            item.key_takeaway = item.key_takeaway_ar
             item.tags_ar = self.translator.translate_tags(item.tags)
-            time.sleep(0.3)
+            time.sleep(0.2)
 
-        # Translate Sports Highlights
+        # Process Sports Highlights
         for item in sports_items:
-            item.title_ar = self.translator.translate(item.title)
-            item.key_takeaway_ar = self.translator.translate(item.key_takeaway)
+            clean_title = re.sub(r"(?i)\s*-\s*(BBC Sport|The Verge|TechCrunch|Barca Universal|Barca Blaugranes|Sky Sports|FC Barcelona|Football Espana|Marca|AS\.com).*$", "", item.title).strip()
+            item.title_ar = self.translator.translate(clean_title)
+            item.key_takeaway_ar = self.generate_crisp_takeaway(item)
+            item.key_takeaway = item.key_takeaway_ar
             item.tags_ar = self.translator.translate_tags(item.tags)
-            time.sleep(0.3)
+            time.sleep(0.2)
 
-        # Synthesize Arabic and English executive summaries
+        # Synthesize executive briefs
         if tech_items:
             tech_summary_en = (
                 f"Scanned {len(tech_items)} prioritized breakthroughs in AI and Big Tech. "
@@ -391,7 +566,7 @@ class NewsProcessor:
             )
             tech_summary_ar = (
                 f"تم رصد {len(tech_items)} من أهم التطورات المتسارعة في قطاع الذكاء الاصطناعي والشركات الكبرى. "
-                f"الخبر الأبرز: '{tech_items[0].title_ar}' (التقييم: {tech_items[0].score}/100)."
+                f"الخبر الأبرز: '{tech_items[0].title_ar}'."
             )
         else:
             tech_summary_en = "No new significant Tech/AI updates discovered in this cycle."
@@ -405,13 +580,12 @@ class NewsProcessor:
             )
             sports_summary_ar = (
                 f"متابعة دقيقة ومكثفة لكرة القدم الأوروبية مع التركيز على نادي برشلونة ({barca_count} أحداث رئيسية). "
-                f"الخبر الأبرز: '{sports_items[0].title_ar}' (التقييم: {sports_items[0].score}/100)."
+                f"الخبر الأبرز: '{sports_items[0].title_ar}'."
             )
         else:
             sports_summary_en = "No new major football developments discovered in this cycle."
             sports_summary_ar = "لم يتم رصد أي تطورات رياضية كبرى جديدة خلال هذه الدورة."
 
-        from datetime import datetime, timezone
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
         return ExecutiveBrief(

@@ -17,16 +17,56 @@ from processor import ExecutiveBrief, ProcessedNewsItem
 class ReportNotifier:
     """Dispatches executive briefings via Telegram and generates sleek Arabic local HTML dashboards."""
 
-    # الرابط الدائم الرسمي للوحة التحكم على GitHub Pages
-    GITHUB_PAGES_URL = "https://maysaraisaa1.github.io/Telegram-News-Watchdog/"
-
     def __init__(self, reports_dir: Optional[Path] = None) -> None:
         self.reports_dir = reports_dir or config.REPORTS_DIR
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
     # =========================================================================
-    # 0. Telegraph Publishing Engine (Native Instant View)
+    # 0. Public HTML Report & Telegraph Publishing Engines
     # =========================================================================
+    def publish_html_dashboard(self, file_path: Path) -> Optional[str]:
+        """
+        Uploads the HTML dashboard to a direct-serving service (dpaste.com .raw)
+        which serves with 'Content-Type: text/html; charset=UTF-8' so browsers
+        render the full interactive graphic dashboard directly instead of raw code.
+        """
+        if not file_path or not file_path.exists():
+            return None
+
+        # Provider 1: dpaste.com (Direct text/html raw rendering)
+        try:
+            print("  [+] Publishing HTML dashboard to dpaste.com for direct browser rendering...")
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            payload = {
+                "content": content,
+                "syntax": "html",
+                "expiry_days": 30,
+            }
+            resp = requests.post("https://dpaste.com/api/v2/", data=payload, timeout=20)
+            if resp.status_code == 201 and resp.text.strip().startswith("http"):
+                raw_url = f"{resp.text.strip()}.raw"
+                print(f"  [✓] Interactive HTML dashboard live at: {raw_url}")
+                return raw_url
+        except Exception as e:
+            print(f"  [!] dpaste publishing notice: {e}")
+
+        # Provider 2: Fallback to Catbox.moe
+        try:
+            print("  [+] Fallback uploading to Catbox.moe...")
+            with open(file_path, "rb") as f:
+                filename = f"watchdog_{file_path.stem}.html"
+                files = {"fileToUpload": (filename, f, "text/html; charset=utf-8")}
+                data = {"reqtype": "fileupload"}
+                resp = requests.post("https://catbox.moe/user/api.php", data=data, files=files, timeout=20)
+                if resp.status_code == 200 and resp.text.strip().startswith("http"):
+                    return resp.text.strip()
+        except Exception as e:
+            print(f"  [!] Fallback upload notice: {e}")
+
+        return None
+
     def publish_to_telegraph(self, brief: ExecutiveBrief) -> Optional[str]:
         """
         Publishes the executive brief to Telegraph API (telegra.ph) for native
@@ -52,19 +92,16 @@ class ReportNotifier:
             for i, item in enumerate(brief.tech_ai_highlights, 1):
                 title_ar = item.title_ar or item.title
                 takeaway_ar = item.key_takeaway_ar or item.key_takeaway
-                tags_str = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
-                nodes.append({
-                    "tag": "h4",
-                    "children": [f"{i}. ", {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]}],
-                })
                 nodes.append({
                     "tag": "p",
                     "children": [
-                        {"tag": "b", "children": ["🎯 التقييم: "]}, f"{item.score}/100 | {tags_str}",
+                        {"tag": "b", "children": [f"🔹 {i} | "]},
+                        {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]},
                         {"tag": "br"},
-                        {"tag": "b", "children": ["💡 الملخص: "]}, takeaway_ar,
+                        {"tag": "b", "children": ["📝 الزبدة: "]}, takeaway_ar,
                         {"tag": "br"},
-                        {"tag": "b", "children": ["📰 المصدر: "]}, item.source,
+                        {"tag": "b", "children": ["📰 المصدر: "]}, f"{item.source} ",
+                        {"tag": "a", "attrs": {"href": item.link}, "children": ["• [رابط الخبر]"]},
                     ],
                 })
 
@@ -75,19 +112,16 @@ class ReportNotifier:
             for i, item in enumerate(brief.sports_highlights, 1):
                 title_ar = item.title_ar or item.title
                 takeaway_ar = item.key_takeaway_ar or item.key_takeaway
-                tags_str = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
-                nodes.append({
-                    "tag": "h4",
-                    "children": [f"{i}. ", {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]}],
-                })
                 nodes.append({
                     "tag": "p",
                     "children": [
-                        {"tag": "b", "children": ["🔥 الأهمية: "]}, f"{item.score}/100 | {tags_str}",
+                        {"tag": "b", "children": [f"🔹 {i} | "]},
+                        {"tag": "a", "attrs": {"href": item.link}, "children": [title_ar]},
                         {"tag": "br"},
-                        {"tag": "b", "children": ["📌 الملخص: "]}, takeaway_ar,
+                        {"tag": "b", "children": ["📝 الزبدة: "]}, takeaway_ar,
                         {"tag": "br"},
-                        {"tag": "b", "children": ["🏟️ المصدر: "]}, item.source,
+                        {"tag": "b", "children": ["🏟️ المصدر: "]}, f"{item.source} ",
+                        {"tag": "a", "attrs": {"href": item.link}, "children": ["• [رابط الخبر]"]},
                     ],
                 })
 
@@ -112,13 +146,52 @@ class ReportNotifier:
 
         return None
 
+    def publish_to_github_pages(
+        self, file_path: Path, repo: str = "maysaraisaa1/Telegram-News-Watchdog"
+    ) -> Optional[str]:
+        """
+        Commits index.html directly to GitHub repository via REST API if GITHUB_TOKEN is present,
+        deploying the official permanent GitHub Pages link: https://maysaraisaa1.github.io/Telegram-News-Watchdog/
+        """
+        import os
+        token = os.getenv("GITHUB_TOKEN", "").strip()
+        if not token:
+            return None
+        try:
+            import base64
+            with open(file_path, "rb") as f:
+                content_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+            api_url = f"https://api.github.com/repos/{repo}/contents/index.html"
+            headers = {
+                "Authorization": f"token {token}",
+                "Accept": "application/vnd.github.v3+json",
+            }
+            sha = None
+            get_res = requests.get(api_url, headers=headers, timeout=10)
+            if get_res.status_code == 200:
+                sha = get_res.json().get("sha")
+
+            payload = {"message": "Update autonomous watchdog dashboard", "content": content_b64}
+            if sha:
+                payload["sha"] = sha
+
+            put_res = requests.put(api_url, headers=headers, json=payload, timeout=15)
+            if put_res.status_code in (200, 201):
+                url = f"https://{repo.split('/')[0]}.github.io/{repo.split('/')[1]}/"
+                print(f"  [✓] Published directly to GitHub Pages: {url}")
+                return url
+        except Exception as e:
+            print(f"  [!] GitHub Pages auto-publish notice: {e}")
+        return None
+
     # =========================================================================
     # 1. Telegram Bot Delivery
     # =========================================================================
     def send_telegram_alert(
         self, brief: ExecutiveBrief, dashboard_path: Optional[Path] = None
     ) -> bool:
-        """Sends the formatted executive brief to Telegram with GitHub Pages & Telegraph links."""
+        """Sends the formatted executive brief to Telegram with live rendered dashboard & Telegraph links."""
         token = config.TELEGRAM_BOT_TOKEN
         chat_id = config.TELEGRAM_CHAT_ID
 
@@ -126,11 +199,15 @@ class ReportNotifier:
             print("  [i] Telegram Bot Token/Chat ID not set. Skipping Telegram notification.")
             return False
 
-        # 1. Use the permanent official GitHub Pages link directly
-        dashboard_web_url = self.GITHUB_PAGES_URL
-
-        # Sync local index.html if generated locally
+        # 1. Publish directly-rendered HTML dashboard (GitHub Pages or dpaste.com)
+        dashboard_web_url = None
         if dashboard_path and dashboard_path.exists():
+            # Check GitHub Pages first if configured
+            dashboard_web_url = self.publish_to_github_pages(dashboard_path)
+            if not dashboard_web_url:
+                dashboard_web_url = self.publish_html_dashboard(dashboard_path)
+
+            # Also keep index.html synced locally for GitHub Pages
             try:
                 index_root = Path(__file__).resolve().parent.parent / "index.html"
                 shutil.copyfile(dashboard_path, index_root)
@@ -152,7 +229,8 @@ class ReportNotifier:
                 "chat_id": chat_id,
                 "text": chunk,
                 "parse_mode": "HTML",
-                "disable_web_page_preview": False,
+                "disable_web_page_preview": True,
+                "link_preview_options": {"is_disabled": True},
             }
 
             # Attach interactive buttons to the final message part
@@ -179,8 +257,16 @@ class ReportNotifier:
                         # Fallback without HTML parse mode if entity parsing failed
                         fallback_payload = {
                             "chat_id": chat_id,
-                            "text": chunk.replace("<b>", "").replace("</b>", "").replace("<i>", "").replace("</i>", "").replace("<code>", "").replace("</code>", ""),
+                            "text": (
+                                chunk.replace("<b>", "")
+                                .replace("</b>", "")
+                                .replace("<i>", "")
+                                .replace("</i>", "")
+                                .replace("<code>", "")
+                                .replace("</code>", "")
+                            ),
                             "disable_web_page_preview": True,
+                            "link_preview_options": {"is_disabled": True},
                         }
                         fb_resp = session.post(url, json=fallback_payload, timeout=20)
                         if fb_resp.status_code == 200:
@@ -210,60 +296,56 @@ class ReportNotifier:
         tech_lines = [
             "🚀 <b>وكيل الرصد والذكاء الإخباري الشامل</b>",
             "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "🤖 <b>أخبار التقنية والذكاء الاصطناعي</b>",
-            "<i>(Google, Apple, Gemini, Claude, OpenAI...)</i>",
+            "🤖 <b>أبرز مستجدات التقنية والذكاء الاصطناعي</b>",
             f"📅 التوقيت: <code>{brief.timestamp}</code>",
-            f"📊 تم فحص <b>{brief.total_scanned}</b> مقالاً | عُثر على <b>{brief.new_found}</b> خبراً جديداً\n",
-            f"📝 <b>الموجز السريع:</b>\n<i>{html.escape(brief.tech_ai_summary_ar)}</i>\n",
-            "────────── أهم الأخبار ──────────\n",
+            f"📊 فحص <b>{brief.total_scanned}</b> مقالاً | أهم <b>{len(brief.tech_ai_highlights)}</b> أحداث مختارة\n",
+            f"📝 <b>الموجز:</b> {html.escape(brief.tech_ai_summary_ar)}\n",
+            "────────────────────────\n",
         ]
 
         for i, item in enumerate(brief.tech_ai_highlights, 1):
             title = html.escape(item.title_ar or item.title)
             takeaway = html.escape(item.key_takeaway_ar or item.key_takeaway)
-            tags = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
+            source = html.escape(item.source)
             tech_lines.append(
-                f"{i}️⃣ <b>{title}</b>\n"
-                f"🎯 <b>التقييم:</b> {item.score}/100 | {tags}\n"
-                f"💡 <b>الملخص:</b> {takeaway}\n"
-                f"🔗 <b>المصدر ({html.escape(item.source)}):</b> <a href='{item.link}'>اضغط لقراءة الخبر كاملاً ↗</a>\n"
+                f"🔹 <b>{i} | {title}</b>\n"
+                f"📝 <b>الزبدة:</b> {takeaway}\n"
+                f"📰 <b>المصدر:</b> {source} • 🔗 <a href='{item.link}'>تفاصيل الخبر ↗</a>\n"
             )
 
         chunks.append("\n".join(tech_lines))
 
         # ==================== Section 2: Sports & FC Barcelona ====================
         sports_lines = [
-            "⚽ <b>أخبار نادي برشلونة والكرة الأوروبية</b>",
-            "<i>(FC Barcelona, UCL, La Liga, Premier League...)</i>",
+            "⚽ <b>أبرز مستجدات نادي برشلونة والكرة الأوروبية</b>",
             "━━━━━━━━━━━━━━━━━━━━━━━━━\n",
-            f"📝 <b>الموجز الرياضي:</b>\n<i>{html.escape(brief.sports_summary_ar)}</i>\n",
-            "────────── أهم الأخبار ──────────\n",
+            f"📝 <b>الموجز:</b> {html.escape(brief.sports_summary_ar)}\n",
+            "────────────────────────\n",
         ]
 
         for i, item in enumerate(brief.sports_highlights, 1):
             title = html.escape(item.title_ar or item.title)
             takeaway = html.escape(item.key_takeaway_ar or item.key_takeaway)
-            tags = " ".join([f"#{t.replace(' ', '_')}" for t in (item.tags_ar or item.tags)])
+            source = html.escape(item.source)
             sports_lines.append(
-                f"{i}️⃣ <b>{title}</b>\n"
-                f"🔥 <b>الأهمية:</b> {item.score}/100 | {tags}\n"
-                f"📌 <b>الملخص:</b> {takeaway}\n"
-                f"🏟️ <b>المصدر ({html.escape(item.source)}):</b> <a href='{item.link}'>اضغط لقراءة الخبر كاملاً ↗</a>\n"
+                f"🔹 <b>{i} | {title}</b>\n"
+                f"📝 <b>الزبدة:</b> {takeaway}\n"
+                f"📰 <b>المصدر:</b> {source} • 🔗 <a href='{item.link}'>تفاصيل الخبر ↗</a>\n"
             )
 
-        # Append Public Interactive Dashboard Link and Telegraph Link
+        # Clean, minimal footer links
         links_footer = []
         if dashboard_url:
             links_footer.append(
-                f"🌐 <b>رابط تصفح لوحة التحكم التفاعلية مباشرة:</b> <a href='{dashboard_url}'>[اضغط هنا]</a>"
+                f"🌐 <b>لوحة التحكم التفاعلية:</b> <a href='{dashboard_url}'>فتح Dashboard كاملة ↗</a>"
             )
         if telegraph_url:
             links_footer.append(
-                f"⚡ <b>أو قراءة التقرير عبر Instant View الفوري:</b> <a href='{telegraph_url}'>[عرض المقال في تيليجرام]</a>"
+                f"⚡ <b>المقال الفوري السريع:</b> <a href='{telegraph_url}'>عرض عبر Instant View ↗</a>"
             )
 
         if links_footer:
-            sports_lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━\n" + "\n".join(links_footer) + "\n")
+            sports_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━\n" + "\n".join(links_footer) + "\n")
 
         chunks.append("\n".join(sports_lines))
 

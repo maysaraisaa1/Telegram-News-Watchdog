@@ -76,11 +76,25 @@ TECH_AI_FEEDS: List[RSSFeedSource] = [
 # 2. Sports & European Football Feeds (Focus on FC Barcelona & Top Competitions)
 SPORTS_FEEDS: List[RSSFeedSource] = [
     RSSFeedSource(
+        name="Barca Universal",
+        url="https://barcauniversal.com/feed/",
+        category="sports",
+        sub_category="barca",
+        weight=1.35,
+    ),
+    RSSFeedSource(
+        name="Barca Blaugranes",
+        url="https://www.barcablaugranes.com/rss/index.xml",
+        category="sports",
+        sub_category="barca",
+        weight=1.3,
+    ),
+    RSSFeedSource(
         name="Google News - FC Barcelona (Exclusive & Transfers)",
         url="https://news.google.com/rss/search?q=FC+Barcelona+OR+Barca+news+transfers&hl=en-US&gl=US&ceid=US:en",
         category="sports",
         sub_category="barca",
-        weight=1.3,
+        weight=1.2,
     ),
     RSSFeedSource(
         name="Google News - UEFA Champions League & Top Leagues",
